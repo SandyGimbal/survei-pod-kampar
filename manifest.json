@@ -1,0 +1,16 @@
+{
+  "name": "POD Navigator Kampar",
+  "short_name": "POD Kampar",
+  "description": "Aplikasi navigasi dan daftar target 181 Palm Oil Dealer Kabupaten Kampar, Riau.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#064e3b",
+  "theme_color": "#064e3b",
+  "icons": [
+    {
+      "src": "assets/qrcode_mobile.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png"
+    }
+  ]
+}
