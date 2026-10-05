@@ -681,18 +681,20 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
   <!-- Mobile Stylesheet -->
   <style>/* ==========================================================================
-   POD Survey Navigator - Kampar, Riau
-   Mobile-First Design System for Field Surveyors
+   POD Navigator Kampar - Premium Modern Mobile-First Design System
+   Palet: Palm Emerald, Obsidian Slate, Warm Amber, Glassmorphism
    ========================================================================== */
 
 :root {
   --primary: #059669;
   --primary-hover: #047857;
+  --primary-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
   --primary-dark: #064e3b;
   --primary-light: #ecfdf5;
   --primary-border: #a7f3d0;
   
   --secondary: #0284c7;
+  --secondary-gradient: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
   --secondary-light: #f0f9ff;
   
   --accent: #f59e0b;
@@ -706,22 +708,26 @@ svg.leaflet-image-layer.leaflet-interactive path {
   
   --dark: #0f172a;
   --dark-surface: #1e293b;
-  --text-main: #1e293b;
+  --text-main: #0f172a;
   --text-muted: #64748b;
   --text-light: #94a3b8;
   
-  --bg-page: #f1f5f9;
+  --bg-page: #f8fafc;
   --bg-card: #ffffff;
   --border-color: #e2e8f0;
+  --border-subtle: #edf2f7;
   
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
   --radius-full: 9999px;
   
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 8px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 20px -3px rgba(0, 0, 0, 0.12), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 6px 16px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 12px 24px -4px rgba(15, 23, 42, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.06);
 
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
@@ -737,22 +743,27 @@ body {
   font-family: var(--font-sans);
   background-color: var(--bg-page);
   color: var(--text-main);
-  line-height: 1.45;
+  line-height: 1.5;
   font-size: 14.5px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Mobile Sticky Top Header */
+/* ==========================================================================
+   HEADER (Glassmorphism & Deep Forest Gradient)
+   ========================================================================== */
+
 .app-header {
-  background: linear-gradient(135deg, #064e3b 0%, #065f46 60%, #047857 100%);
+  background: linear-gradient(135deg, #022c22 0%, #064e3b 55%, #047857 100%);
   color: #ffffff;
-  padding: 12px 16px;
+  padding: 14px 18px;
   position: sticky;
   top: 0;
   z-index: 1000;
-  box-shadow: 0 2px 10px rgba(6, 78, 59, 0.3);
+  box-shadow: 0 4px 20px rgba(2, 44, 34, 0.35);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .header-inner {
@@ -761,39 +772,42 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
 }
 
 .brand-section {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .brand-logo {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  backdrop-filter: blur(4px);
+  font-size: 22px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   flex-shrink: 0;
 }
 
 .brand-titles h1 {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 800;
-  letter-spacing: -0.2px;
+  letter-spacing: -0.3px;
   line-height: 1.2;
 }
 
 .brand-titles p {
-  font-size: 11.5px;
+  font-size: 12px;
   color: #a7f3d0;
   font-weight: 600;
+  letter-spacing: 0.1px;
 }
 
 .header-action-buttons {
@@ -803,34 +817,40 @@ body {
 }
 
 .btn-mobile-qr {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.3);
   color: #ffffff;
-  padding: 6px 12px;
+  padding: 8px 14px;
   border-radius: var(--radius-full);
   font-family: inherit;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
+  backdrop-filter: blur(4px);
 }
 
-.btn-mobile-qr:hover {
+.btn-mobile-qr:hover,
+.btn-mobile-qr:active {
   background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
 }
 
-/* Tab Navigation Bar */
+/* ==========================================================================
+   SEGMENTED NAVIGATION BAR (iOS Style Glass Tab)
+   ========================================================================== */
+
 .tab-navbar {
   background: #ffffff;
   border-bottom: 1px solid var(--border-color);
   position: sticky;
-  top: 62px;
+  top: 70px;
   z-index: 990;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: var(--shadow-xs);
 }
 
 .tab-nav-inner {
@@ -838,92 +858,94 @@ body {
   margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  padding: 0;
+  padding: 6px 12px;
+  gap: 6px;
 }
 
 .nav-tab-btn {
-  background: none;
+  background: transparent;
   border: none;
   outline: none;
-  padding: 12px 6px;
+  padding: 10px 8px;
+  border-radius: var(--radius-sm);
   font-family: inherit;
   font-size: 13px;
   font-weight: 700;
   color: var(--text-muted);
   cursor: pointer;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 3px;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
   position: relative;
-  transition: all 0.15s ease;
 }
 
-.nav-tab-btn span:first-child {
-  font-size: 17px;
+.nav-tab-btn:hover {
+  color: var(--text-main);
+  background: #f8fafc;
 }
 
 .nav-tab-btn.active {
+  background: var(--primary-light);
   color: var(--primary);
+  font-weight: 800;
 }
 
 .nav-tab-btn.active::after {
   content: '';
   position: absolute;
-  bottom: 0;
-  left: 15%;
-  right: 15%;
+  bottom: -6px;
+  left: 20%;
+  right: 20%;
   height: 3px;
   background-color: var(--primary);
   border-radius: 3px 3px 0 0;
 }
 
-/* Main Container */
+/* ==========================================================================
+   APP CONTENT & STICKY FILTER BAR
+   ========================================================================== */
+
 .app-content {
   flex: 1;
   max-width: 1000px;
   width: 100%;
   margin: 0 auto;
-  padding: 12px 12px 80px;
+  padding: 14px 14px 80px;
 }
 
-/* Sticky Quick Filter Bar */
 .filter-sticky-bar {
   background: #ffffff;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: 12px;
-  margin-bottom: 14px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
   box-shadow: var(--shadow-sm);
 }
 
-.search-box-wrapper {
-  position: relative;
-  margin-bottom: 10px;
-}
-
-/* Dataset Switcher (63 Targets vs 181 All Kampar) */
+/* Dataset Mode Switcher (63 Targets vs 181 All Kampar) */
 .dataset-switcher-bar {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 12px;
   background: #f1f5f9;
   padding: 4px;
   border-radius: var(--radius-md);
 }
 
 .btn-dataset-switch {
-  flex: 1;
-  background: none;
+  background: transparent;
   border: none;
-  padding: 8px 10px;
+  padding: 9px 12px;
   border-radius: var(--radius-sm);
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -934,77 +956,107 @@ body {
 .btn-dataset-switch.active {
   background: #ffffff;
   color: var(--dark);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: var(--shadow-sm);
 }
 
-.badge-target-flag {
-  background: #d1fae5;
-  color: #065f46;
-  font-size: 10.5px;
-  font-weight: 800;
-  padding: 2px 7px;
-  border-radius: 4px;
-}
-
-.badge-prev-flag {
-  background: #f1f5f9;
-  color: #64748b;
-  font-size: 10.5px;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 4px;
+/* Search Box */
+.search-box-wrapper {
+  position: relative;
+  margin-bottom: 12px;
 }
 
 .search-box-input {
   width: 100%;
-  padding: 10px 14px 10px 38px;
+  padding: 11px 16px 11px 40px;
   font-family: inherit;
   font-size: 14px;
   background: #f8fafc;
   border: 1.5px solid var(--border-color);
   border-radius: var(--radius-md);
   outline: none;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  color: var(--text-main);
 }
 
 .search-box-input:focus {
   background: #ffffff;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
 }
 
 .search-icon-inside {
   position: absolute;
-  left: 12px;
+  left: 14px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 15px;
+  font-size: 16px;
   color: var(--text-muted);
   pointer-events: none;
 }
 
-/* Horizontal Scrolling Filter Chips for 13 Kecamatan */
+/* Horizontal Scrolling Kecamatan Chips */
 .filter-chips-scroll {
   display: flex;
-  gap: 6px;
+  gap: 7px;
   overflow-x: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 2px;
+  padding-bottom: 4px;
 }
 
 .filter-chips-scroll::-webkit-scrollbar {
   display: none;
 }
 
+.kec-chip {
+  padding: 7px 14px;
+  border-radius: var(--radius-full);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  background-color: #f8fafc;
+  border: 1.5px solid var(--border-color);
+  color: var(--text-muted);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kec-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background-color: #ffffff;
+}
+
+.kec-chip.active {
+  background: var(--primary-gradient);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+}
+
+.kec-chip .chip-count {
+  background: rgba(0, 0, 0, 0.08);
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+}
+
+.kec-chip.active .chip-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
 /* Secondary Village Sub-Filter */
 .village-subfilter-bar {
   display: flex;
-  gap: 5px;
+  gap: 6px;
   overflow-x: auto;
   scrollbar-width: none;
-  padding: 8px 0 2px;
-  margin-top: 8px;
+  padding: 10px 0 2px;
+  margin-top: 10px;
   border-top: 1px dashed var(--border-color);
 }
 
@@ -1016,9 +1068,9 @@ body {
   background: #ffffff;
   border: 1px solid #cbd5e1;
   color: #334155;
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: var(--radius-full);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
@@ -1034,63 +1086,32 @@ body {
   background: var(--secondary);
   border-color: var(--secondary);
   color: #ffffff;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);
 }
 
 .village-tag-badge {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 11.5px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
   font-weight: 600;
   color: #334155;
-  margin: 2px 4px 2px 0;
+  margin: 3px 5px 3px 0;
+  transition: all 0.15s ease;
+}
+
+.village-tag-badge:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
 }
 
 .village-tag-badge strong {
   color: var(--primary);
-}
-
-.kec-chip {
-  padding: 6px 12px;
-  border-radius: var(--radius-full);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  background-color: #f1f5f9;
-  border: 1px solid var(--border-color);
-  color: var(--text-muted);
-  transition: all 0.15s ease;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.kec-chip:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.kec-chip.active {
-  background-color: var(--primary);
-  border-color: var(--primary);
-  color: #ffffff;
-}
-
-.kec-chip .chip-count {
-  background: rgba(0, 0, 0, 0.1);
-  padding: 1px 6px;
-  border-radius: var(--radius-full);
-  font-size: 10.5px;
-}
-
-.kec-chip.active .chip-count {
-  background: rgba(255, 255, 255, 0.25);
-  color: #ffffff;
 }
 
 /* Status Filter Row */
@@ -1098,11 +1119,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px dashed var(--border-color);
-  font-size: 12px;
-  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+  font-size: 12.5px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
@@ -1114,12 +1135,13 @@ body {
 .btn-status-filter {
   background: #f8fafc;
   border: 1px solid var(--border-color);
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: var(--radius-sm);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   color: var(--text-muted);
+  transition: all 0.15s ease;
 }
 
 .btn-status-filter.active {
@@ -1137,29 +1159,90 @@ body {
   color: var(--primary);
 }
 
+/* Visual Survey Progress Bar */
+.progress-meter-box {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.progress-meter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.progress-meter-title {
+  font-weight: 700;
+  color: var(--dark);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.progress-meter-val {
+  font-weight: 800;
+  color: var(--primary);
+  background: var(--primary-light);
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+}
+
+.progress-meter-track {
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-meter-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  border-radius: var(--radius-full);
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* ==========================================================================
-   VIEW 1: TARGET CARDS LIST (Mobile Optimized)
+   VIEW 1: TARGET CARDS LIST (Modern Tactile Cards)
    ========================================================================== */
 
 .target-cards-grid {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .target-card {
   background: #ffffff;
   border: 1.5px solid var(--border-color);
+  border-left: 5px solid #f59e0b; /* Amber strip for Pending */
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 18px;
   box-shadow: var(--shadow-sm);
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  overflow: hidden;
+}
+
+.target-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: #cbd5e1;
+  border-left-color: #f59e0b;
 }
 
 .target-card.completed {
   border-color: #86efac;
+  border-left: 5px solid #10b981; /* Emerald strip for Completed */
   background: #f0fdf4;
+}
+
+.target-card.completed:hover {
+  border-color: #4ade80;
+  border-left-color: #10b981;
 }
 
 .card-top-row {
@@ -1167,7 +1250,7 @@ body {
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .card-meta-badges {
@@ -1183,8 +1266,8 @@ body {
   font-family: 'SF Mono', Consolas, monospace;
   font-size: 11px;
   font-weight: 800;
-  padding: 2px 7px;
-  border-radius: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
 }
 
 .badge-kecamatan {
@@ -1192,8 +1275,8 @@ body {
   color: #0369a1;
   font-size: 11.5px;
   font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
 }
 
 .badge-jenis {
@@ -1201,25 +1284,43 @@ body {
   color: #92400e;
   font-size: 11px;
   font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.badge-target-flag {
+  background: #d1fae5;
+  color: #065f46;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.badge-prev-flag {
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
 }
 
 .card-title {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 800;
   color: var(--dark);
-  line-height: 1.25;
-  margin-bottom: 3px;
+  line-height: 1.3;
+  margin-bottom: 4px;
 }
 
 .card-village {
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--text-muted);
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-bottom: 8px;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 
 /* Coordinates Info Box */
@@ -1227,18 +1328,19 @@ body {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: var(--radius-sm);
-  padding: 8px 10px;
-  margin-bottom: 12px;
+  padding: 9px 12px;
+  margin-bottom: 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  font-size: 11.5px;
+  gap: 10px;
+  font-size: 12px;
 }
 
 .coords-text {
   font-family: 'SF Mono', Consolas, monospace;
   color: #334155;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1247,26 +1349,27 @@ body {
 .btn-copy-coords {
   background: #ffffff;
   border: 1px solid #cbd5e1;
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
   font-weight: 700;
   cursor: pointer;
   flex-shrink: 0;
+  transition: all 0.15s ease;
 }
 
-.btn-copy-coords:active {
-  background: #e2e8f0;
+.btn-copy-coords:hover {
+  background: #f1f5f9;
 }
 
-/* Primary Action Buttons (Big Touch Targets) */
+/* Primary Action Buttons */
 .card-actions-grid {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;
   gap: 8px;
 }
 
-@media (max-width: 420px) {
+@media (max-width: 440px) {
   .card-actions-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -1276,75 +1379,83 @@ body {
 }
 
 .btn-gmaps {
-  background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+  background: var(--primary-gradient);
   color: #ffffff;
   border: none;
-  padding: 12px 14px;
+  padding: 12px 16px;
   border-radius: var(--radius-md);
   font-family: inherit;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 800;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
-  transition: all 0.15s;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  transition: all 0.15s ease;
 }
 
+.btn-gmaps:hover,
 .btn-gmaps:active {
-  transform: scale(0.98);
-  background: #047857;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
 }
 
 .btn-waze {
-  background: #0284c7;
+  background: var(--secondary-gradient);
   color: #ffffff;
   border: none;
-  padding: 11px 12px;
+  padding: 12px 14px;
   border-radius: var(--radius-md);
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
+  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.25);
+  transition: all 0.15s ease;
+}
+
+.btn-waze:hover {
+  transform: translateY(-1px);
 }
 
 .btn-toggle-done {
   background: #ffffff;
   border: 1.5px solid #cbd5e1;
   color: #475569;
-  padding: 11px 10px;
+  padding: 12px 12px;
   border-radius: var(--radius-md);
   font-family: inherit;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  transition: all 0.15s;
+  transition: all 0.15s ease;
 }
 
 .target-card.completed .btn-toggle-done {
   background: #10b981;
   border-color: #10b981;
   color: #ffffff;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
 /* Quick Note on Card */
 .card-quick-note {
-  margin-top: 10px;
-  padding-top: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
   border-top: 1px dashed var(--border-color);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .note-input-inline {
@@ -1352,7 +1463,7 @@ body {
   background: transparent;
   border: none;
   font-family: inherit;
-  font-size: 12px;
+  font-size: 12.5px;
   color: #334155;
   outline: none;
 }
@@ -1367,8 +1478,8 @@ body {
    ========================================================================== */
 
 .map-page-wrapper {
-  height: calc(100vh - 130px);
-  min-height: 480px;
+  height: calc(100vh - 140px);
+  min-height: 500px;
   border-radius: var(--radius-lg);
   border: 1.5px solid var(--border-color);
   box-shadow: var(--shadow-sm);
@@ -1382,7 +1493,6 @@ body {
   z-index: 1;
 }
 
-/* Floating Map Buttons */
 .map-floating-controls {
   position: absolute;
   top: 14px;
@@ -1393,11 +1503,11 @@ body {
   gap: 8px;
 }
 
-.btn-map-locate {
-  background: #ffffff;
+.btn-map-control {
+  background: rgba(255, 255, 255, 0.95);
   color: #0f172a;
   border: 1.5px solid var(--border-color);
-  padding: 10px 14px;
+  padding: 9px 15px;
   border-radius: var(--radius-full);
   font-family: inherit;
   font-size: 12.5px;
@@ -1406,12 +1516,28 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  box-shadow: var(--shadow-md);
-  transition: all 0.15s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(8px);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
 }
 
-.btn-map-locate:active {
-  background: #f1f5f9;
+.btn-map-control:hover {
+  background: #ffffff;
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+}
+
+.btn-map-control:active {
+  transform: translateY(0);
+}
+
+.btn-map-control.active {
+  background: var(--dark);
+  color: #ffffff;
+  border-color: var(--dark);
 }
 
 .map-bottom-info-pill {
@@ -1419,27 +1545,29 @@ body {
   bottom: 16px;
   left: 14px;
   right: 14px;
-  background: rgba(15, 23, 42, 0.9);
+  background: rgba(15, 23, 42, 0.92);
   color: #ffffff;
-  padding: 10px 16px;
+  padding: 11px 18px;
   border-radius: var(--radius-md);
-  font-size: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
   z-index: 1000;
   box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* ==========================================================================
-   VIEW 3: KECAMATAN & ROUTE SCHEDULE
+   VIEW 3: KECAMATAN BREAKDOWN & TIMELINE
    ========================================================================== */
 
 .kecamatan-grid-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 14px;
   margin-bottom: 24px;
 }
 
@@ -1447,26 +1575,27 @@ body {
   background: #ffffff;
   border: 1.5px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 18px;
   box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .kecamatan-card-box:hover {
   border-color: var(--primary);
   transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .kec-card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .kec-card-name {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 800;
   color: var(--dark);
 }
@@ -1474,26 +1603,26 @@ body {
 .kec-card-count {
   background: var(--primary-light);
   color: var(--primary);
-  padding: 3px 10px;
+  padding: 4px 12px;
   border-radius: var(--radius-full);
   font-size: 12px;
   font-weight: 800;
 }
 
 .kec-villages-list {
-  font-size: 12px;
+  font-size: 12.5px;
   color: var(--text-muted);
-  line-height: 1.4;
+  line-height: 1.5;
   margin-bottom: 12px;
 }
 
 .kec-card-btn-action {
   width: 100%;
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  padding: 8px;
+  background: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  padding: 9px;
   border-radius: var(--radius-md);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
   color: var(--dark);
   cursor: pointer;
@@ -1501,26 +1630,40 @@ body {
   align-items: center;
   justify-content: center;
   gap: 6px;
+  transition: all 0.15s ease;
 }
 
-/* Daily Schedule Timeline */
+.kec-card-btn-action:hover {
+  background: #f1f5f9;
+}
+
+/* Timeline */
 .timeline-section-title {
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 800;
   color: var(--dark);
   margin-bottom: 12px;
   display: flex;
   align-items: center;
   gap: 8px;
+  letter-spacing: -0.2px;
 }
 
 .day-timeline-card {
   background: #ffffff;
   border: 1.5px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: 16px;
-  margin-bottom: 12px;
+  padding: 18px;
+  margin-bottom: 14px;
   box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.day-timeline-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .day-timeline-header {
@@ -1533,37 +1676,40 @@ body {
 .day-timeline-tag {
   background: #0f172a;
   color: #ffffff;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 800;
-  padding: 3px 8px;
+  padding: 3px 9px;
   border-radius: var(--radius-full);
 }
 
 .day-date-label {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
   color: var(--primary);
 }
 
 .day-timeline-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--dark);
   margin-bottom: 4px;
 }
 
 .day-timeline-corridor {
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--text-muted);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
-/* QR Code & Mobile Modal */
+/* ==========================================================================
+   MODAL QR CODE & TOAST
+   ========================================================================== */
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(6px);
   z-index: 9999;
   display: none;
   align-items: center;
@@ -1577,16 +1723,16 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .modal-dialog {
   background: #ffffff;
-  border-radius: var(--radius-lg);
-  max-width: 400px;
+  border-radius: var(--radius-xl);
+  max-width: 420px;
   width: 100%;
-  padding: 24px;
+  padding: 28px 24px;
   text-align: center;
   box-shadow: var(--shadow-lg);
   position: relative;
@@ -1594,11 +1740,11 @@ body {
 
 .modal-close-btn {
   position: absolute;
-  top: 12px;
-  right: 14px;
+  top: 14px;
+  right: 16px;
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: 24px;
   cursor: pointer;
   color: var(--text-muted);
 }
@@ -1609,8 +1755,9 @@ body {
   margin: 16px auto;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 8px;
+  padding: 10px;
   background: #ffffff;
+  box-shadow: var(--shadow-xs);
 }
 
 .qr-image-box img {
@@ -1625,7 +1772,7 @@ body {
   border-radius: var(--radius-md);
   font-family: 'SF Mono', Consolas, monospace;
   font-weight: 700;
-  font-size: 13.5px;
+  font-size: 14px;
   color: var(--primary);
   margin-bottom: 12px;
   word-break: break-all;
@@ -1634,7 +1781,7 @@ body {
 /* Toast */
 .toast-container {
   position: fixed;
-  bottom: 20px;
+  bottom: 24px;
   left: 20px;
   right: 20px;
   z-index: 10000;
@@ -1647,17 +1794,18 @@ body {
 .toast {
   background: #0f172a;
   color: #ffffff;
-  padding: 12px 18px;
+  padding: 13px 20px;
   border-radius: var(--radius-md);
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
   box-shadow: var(--shadow-lg);
   pointer-events: auto;
   margin: 0 auto;
-  max-width: 450px;
+  max-width: 460px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  border-left: 4px solid var(--primary);
 }
 </style>
 </head>
@@ -1737,7 +1885,18 @@ body {
           <button type="button" class="btn-status-filter" data-status="DONE">✅ Selesai</button>
         </div>
         <div class="status-counter-text" id="status-counter-text">
-          Menampilkan: <strong>63</strong> titik • Total: <strong id="global-progress-badge">0/63 Selesai</strong>
+          Menampilkan: <strong>63</strong> titik • Selesai: <strong id="global-progress-badge">0/63</strong>
+        </div>
+      </div>
+
+      <!-- Visual Survey Progress Bar -->
+      <div class="progress-meter-box">
+        <div class="progress-meter-header">
+          <span class="progress-meter-title">⚡ Progres Kunjungan Survei</span>
+          <span class="progress-meter-val" id="progress-percentage-val">0% (0/63 Selesai)</span>
+        </div>
+        <div class="progress-meter-track">
+          <div class="progress-meter-bar" id="progress-meter-bar" style="width: 0%;"></div>
         </div>
       </div>
     </div>
@@ -1748,8 +1907,14 @@ body {
         <div id="leaflet-map" class="leaflet-map-canvas"></div>
         
         <div class="map-floating-controls">
-          <button type="button" class="btn-map-locate" id="btn-map-locate-me" title="Tampilkan posisi saya saat ini di peta">
+          <button type="button" class="btn-map-control" id="btn-map-locate-me" title="Tampilkan posisi saya saat ini di peta">
             <span>📍</span> Lokasi Saya
+          </button>
+          <button type="button" class="btn-map-control" id="btn-map-layer-toggle" title="Ganti ke Citra Satelit Kebun Sawit">
+            <span id="layer-toggle-icon">🛰️</span> <span id="layer-toggle-text">Citra Satelit</span>
+          </button>
+          <button type="button" class="btn-map-control" id="btn-map-fit-bounds" title="Pusatkan kembali peta ke titik POD">
+            <span>🎯</span> Pusatkan
           </button>
         </div>
 
@@ -9571,7 +9736,10 @@ window.POD_SURVEY_MASTER_DATA = {
     searchQuery: '',
     mapInstance: null,
     mapMarkers: {},
-    userMarker: null
+    userMarker: null,
+    currentLayer: 'osm',
+    osmLayer: null,
+    satelliteLayer: null
   };
 
   const KEC_COLORS = {
@@ -9906,9 +10074,10 @@ window.POD_SURVEY_MASTER_DATA = {
 
     const currentData = getActiveDataset();
     if (counterText) {
-      const doneTotal = Object.keys(State.visited).length;
-      counterText.innerHTML = `Menampilkan: <strong>${points.length}</strong> / ${currentData.length} titik • Selesai: <strong>${doneTotal}/${State.masterList.length}</strong>`;
+      const doneTotal = currentData.filter((p) => !!State.visited[p.id_pod]).length;
+      counterText.innerHTML = `Menampilkan: <strong>${points.length}</strong> / ${currentData.length} titik • Selesai: <strong>${doneTotal}/${currentData.length}</strong>`;
     }
+    updateCounterBadges();
 
     if (points.length === 0) {
       container.innerHTML = `
@@ -10023,9 +10192,16 @@ window.POD_SURVEY_MASTER_DATA = {
         attributionControl: false
       }).setView([0.35, 101.25], 10);
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18
-      }).addTo(State.mapInstance);
+      State.osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+      });
+
+      State.satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19
+      });
+
+      // Default: OSM
+      State.osmLayer.addTo(State.mapInstance);
 
       // Add PKS Prioritas
       State.pksList.forEach((pks) => {
@@ -10052,6 +10228,43 @@ window.POD_SURVEY_MASTER_DATA = {
       if (btnLocate) {
         btnLocate.addEventListener('click', () => {
           getUserLocationOnMap();
+        });
+      }
+
+      const btnLayer = document.getElementById('btn-map-layer-toggle');
+      if (btnLayer) {
+        btnLayer.addEventListener('click', () => {
+          const icon = document.getElementById('layer-toggle-icon');
+          const text = document.getElementById('layer-toggle-text');
+          if (State.currentLayer === 'osm') {
+            State.mapInstance.removeLayer(State.osmLayer);
+            State.satelliteLayer.addTo(State.mapInstance);
+            State.currentLayer = 'satellite';
+            if (icon) icon.textContent = '🗺️';
+            if (text) text.textContent = 'Peta Jalan';
+            btnLayer.classList.add('active');
+            showToast('Citra Satelit Kebun Sawit aktif! 🛰️');
+          } else {
+            State.mapInstance.removeLayer(State.satelliteLayer);
+            State.osmLayer.addTo(State.mapInstance);
+            State.currentLayer = 'osm';
+            if (icon) icon.textContent = '🛰️';
+            if (text) text.textContent = 'Citra Satelit';
+            btnLayer.classList.remove('active');
+            showToast('Peta Jalan aktif! 🗺️');
+          }
+        });
+      }
+
+      const btnFit = document.getElementById('btn-map-fit-bounds');
+      if (btnFit) {
+        btnFit.addEventListener('click', () => {
+          const filtered = getFilteredPoints();
+          if (filtered.length > 0) {
+            const bounds = filtered.map((p) => [p.lat, p.lng]);
+            State.mapInstance.fitBounds(L.latLngBounds(bounds), { padding: [40, 40] });
+            showToast('Tampilan dipusatkan ke titik terpilih 🎯');
+          }
         });
       }
     }
@@ -10314,11 +10527,24 @@ window.POD_SURVEY_MASTER_DATA = {
   }
 
   function updateCounterBadges() {
-    const done = Object.keys(State.visited).length;
-    const total = State.masterList.length;
+    const currentData = getActiveDataset();
+    const done = currentData.filter((p) => !!State.visited[p.id_pod]).length;
+    const total = currentData.length;
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
     const badge = document.getElementById('global-progress-badge');
     if (badge) {
-      badge.textContent = `${done}/${total} Selesai`;
+      badge.textContent = `${done}/${total}`;
+    }
+
+    const pctVal = document.getElementById('progress-percentage-val');
+    if (pctVal) {
+      pctVal.textContent = `${pct}% (${done}/${total} Selesai)`;
+    }
+
+    const progressBar = document.getElementById('progress-meter-bar');
+    if (progressBar) {
+      progressBar.style.width = `${pct}%`;
     }
   }
 

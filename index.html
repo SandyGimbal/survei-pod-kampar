@@ -97,7 +97,18 @@
           <button type="button" class="btn-status-filter" data-status="DONE">✅ Selesai</button>
         </div>
         <div class="status-counter-text" id="status-counter-text">
-          Menampilkan: <strong>63</strong> titik • Total: <strong id="global-progress-badge">0/63 Selesai</strong>
+          Menampilkan: <strong>63</strong> titik • Selesai: <strong id="global-progress-badge">0/63</strong>
+        </div>
+      </div>
+
+      <!-- Visual Survey Progress Bar -->
+      <div class="progress-meter-box">
+        <div class="progress-meter-header">
+          <span class="progress-meter-title">⚡ Progres Kunjungan Survei</span>
+          <span class="progress-meter-val" id="progress-percentage-val">0% (0/63 Selesai)</span>
+        </div>
+        <div class="progress-meter-track">
+          <div class="progress-meter-bar" id="progress-meter-bar" style="width: 0%;"></div>
         </div>
       </div>
     </div>
@@ -108,8 +119,14 @@
         <div id="leaflet-map" class="leaflet-map-canvas"></div>
         
         <div class="map-floating-controls">
-          <button type="button" class="btn-map-locate" id="btn-map-locate-me" title="Tampilkan posisi saya saat ini di peta">
+          <button type="button" class="btn-map-control" id="btn-map-locate-me" title="Tampilkan posisi saya saat ini di peta">
             <span>📍</span> Lokasi Saya
+          </button>
+          <button type="button" class="btn-map-control" id="btn-map-layer-toggle" title="Ganti ke Citra Satelit Kebun Sawit">
+            <span id="layer-toggle-icon">🛰️</span> <span id="layer-toggle-text">Citra Satelit</span>
+          </button>
+          <button type="button" class="btn-map-control" id="btn-map-fit-bounds" title="Pusatkan kembali peta ke titik POD">
+            <span>🎯</span> Pusatkan
           </button>
         </div>
 

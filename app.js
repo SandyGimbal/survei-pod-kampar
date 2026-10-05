@@ -27,7 +27,10 @@
     searchQuery: '',
     mapInstance: null,
     mapMarkers: {},
-    userMarker: null
+    userMarker: null,
+    currentLayer: 'osm',
+    osmLayer: null,
+    satelliteLayer: null
   };
 
   const KEC_COLORS = {
@@ -362,9 +365,10 @@
 
     const currentData = getActiveDataset();
     if (counterText) {
-      const doneTotal = Object.keys(State.visited).length;
-      counterText.innerHTML = `Menampilkan: <strong>${points.length}</strong> / ${currentData.length} titik • Selesai: <strong>${doneTotal}/${State.masterList.length}</strong>`;
+      const doneTotal = currentData.filter((p) => !!State.visited[p.id_pod]).length;
+      counterText.innerHTML = `Menampilkan: <strong>${points.length}</strong> / ${currentData.length} titik • Selesai: <strong>${doneTotal}/${currentData.length}</strong>`;
     }
+    updateCounterBadges();
 
     if (points.length === 0) {
       container.innerHTML = `
@@ -479,9 +483,16 @@
         attributionControl: false
       }).setView([0.35, 101.25], 10);
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18
-      }).addTo(State.mapInstance);
+      State.osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+      });
+
+      State.satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19
+      });
+
+      // Default: OSM
+      State.osmLayer.addTo(State.mapInstance);
 
       // Add PKS Prioritas
       State.pksList.forEach((pks) => {
@@ -508,6 +519,43 @@
       if (btnLocate) {
         btnLocate.addEventListener('click', () => {
           getUserLocationOnMap();
+        });
+      }
+
+      const btnLayer = document.getElementById('btn-map-layer-toggle');
+      if (btnLayer) {
+        btnLayer.addEventListener('click', () => {
+          const icon = document.getElementById('layer-toggle-icon');
+          const text = document.getElementById('layer-toggle-text');
+          if (State.currentLayer === 'osm') {
+            State.mapInstance.removeLayer(State.osmLayer);
+            State.satelliteLayer.addTo(State.mapInstance);
+            State.currentLayer = 'satellite';
+            if (icon) icon.textContent = '🗺️';
+            if (text) text.textContent = 'Peta Jalan';
+            btnLayer.classList.add('active');
+            showToast('Citra Satelit Kebun Sawit aktif! 🛰️');
+          } else {
+            State.mapInstance.removeLayer(State.satelliteLayer);
+            State.osmLayer.addTo(State.mapInstance);
+            State.currentLayer = 'osm';
+            if (icon) icon.textContent = '🛰️';
+            if (text) text.textContent = 'Citra Satelit';
+            btnLayer.classList.remove('active');
+            showToast('Peta Jalan aktif! 🗺️');
+          }
+        });
+      }
+
+      const btnFit = document.getElementById('btn-map-fit-bounds');
+      if (btnFit) {
+        btnFit.addEventListener('click', () => {
+          const filtered = getFilteredPoints();
+          if (filtered.length > 0) {
+            const bounds = filtered.map((p) => [p.lat, p.lng]);
+            State.mapInstance.fitBounds(L.latLngBounds(bounds), { padding: [40, 40] });
+            showToast('Tampilan dipusatkan ke titik terpilih 🎯');
+          }
         });
       }
     }
@@ -770,11 +818,24 @@
   }
 
   function updateCounterBadges() {
-    const done = Object.keys(State.visited).length;
-    const total = State.masterList.length;
+    const currentData = getActiveDataset();
+    const done = currentData.filter((p) => !!State.visited[p.id_pod]).length;
+    const total = currentData.length;
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
     const badge = document.getElementById('global-progress-badge');
     if (badge) {
-      badge.textContent = `${done}/${total} Selesai`;
+      badge.textContent = `${done}/${total}`;
+    }
+
+    const pctVal = document.getElementById('progress-percentage-val');
+    if (pctVal) {
+      pctVal.textContent = `${pct}% (${done}/${total} Selesai)`;
+    }
+
+    const progressBar = document.getElementById('progress-meter-bar');
+    if (progressBar) {
+      progressBar.style.width = `${pct}%`;
     }
   }
 
