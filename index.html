@@ -227,6 +227,53 @@
     </div>
   </div>
 
+  <!-- Modal Detail Informasi Titik POD (Image 1 Style) -->
+  <div class="modal-backdrop" id="pod-detail-modal">
+    <div class="modal-dialog modal-dialog-detail">
+      <div class="modal-detail-header">
+        <div class="modal-detail-title-group">
+          <span class="modal-detail-icon">🌴</span>
+          <div class="modal-detail-text">
+            <h3 id="modal-detail-name" class="modal-detail-title">Nama Titik POD</h3>
+            <p id="modal-detail-sub" class="modal-detail-subtitle">Kecamatan • ID</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="btn-close-detail-modal" aria-label="Tutup">&times;</button>
+      </div>
+
+      <div class="modal-detail-body">
+        <!-- Table matching Image 1: #9CBCE2 header + #D4E4F3 alternating rows -->
+        <div class="table-card-container">
+          <table class="kmz-attr-table">
+            <thead>
+              <tr>
+                <th colspan="2" id="kmz-table-header-name">Peron Rizal</th>
+              </tr>
+            </thead>
+            <tbody id="kmz-table-tbody">
+              <!-- Rendered dynamically with 22 rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-detail-footer">
+        <a id="btn-detail-gmaps" href="#" target="_blank" rel="noopener noreferrer" class="btn-modal-action btn-gmaps">
+          <span>🧭</span> <span>Google Maps</span>
+        </a>
+        <a id="btn-detail-waze" href="#" target="_blank" rel="noopener noreferrer" class="btn-modal-action btn-waze">
+          <span>🗺️</span> <span>Waze</span>
+        </a>
+        <button type="button" id="btn-detail-copy" class="btn-modal-action btn-copy-action">
+          <span>📋</span> <span>Salin Info</span>
+        </button>
+        <button type="button" id="btn-detail-toggle-done" class="btn-modal-action btn-status-action">
+          <span id="btn-detail-toggle-icon">🟡</span> <span id="btn-detail-toggle-text">Tandai</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="assets/vendor/leaflet/leaflet.js"></script>
   <script src="assets/vendor/xlsx.full.min.js"></script>

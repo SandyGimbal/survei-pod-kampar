@@ -3,12 +3,7 @@ const path = require('path');
 const xlsx = require('xlsx');
 const AdmZip = require('adm-zip');
 
-// 1. Load Excel 63 POD
-const excelPath = path.join(__dirname, 'Data_63_Objek_POD_dari_KMZ_GoogleMaps.xlsx');
-const wb = xlsx.readFile(excelPath);
-const sheet = wb.Sheets['63 Objek POD'];
-const rawData = xlsx.utils.sheet_to_json(sheet);
-
+// 1. Coordinate & Utility Functions
 function latLonToUTM(lat, lon) {
   const zone = Math.floor((lon + 180) / 6) + 1;
   const centralMeridian = (zone - 1) * 6 - 180 + 3;
@@ -77,26 +72,6 @@ function haversine(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-function parseKMZ(txt) {
-  const res = {};
-  const patterns = [
-    ['FID', /FID\s+(\d+)/],
-    ['ID_POD', /ID_POD\s+([A-Za-z0-9_]+)/],
-    ['Name_POD', /Name_POD\s+(.*?)\s+(Capacity_E|Lat_POD)/],
-    ['District', /District_P\s+([A-Za-z\s]+?)\s+SubDistric/],
-    ['SubDistrict', /SubDistric\s+([A-Za-z\s]+?)\s+Village_PO/],
-    ['Village', /Village_PO\s+([A-Za-z\s]+?)\s+Source_POD/],
-    ['Type_POD', /Type_POD\s+([A-Za-z\s]+?)\s+Active/],
-    ['Priority', /Priority\s+(Priority\s+\d+|[^\s]+)/],
-    ['SurveyStatus', /Survey\s+(Belum Di Survey|Sudah Di Survey|.*?)(?:\s+function|$)/]
-  ];
-  for (const [key, reg] of patterns) {
-    const m = (txt || '').match(reg);
-    if (m) res[key] = m[1].trim();
-  }
-  return res;
-}
-
 function orderPointsNearestNeighbor(pts) {
   if (pts.length <= 1) return pts;
   const remaining = [...pts];
@@ -122,8 +97,137 @@ function orderPointsNearestNeighbor(pts) {
   return ordered;
 }
 
-// 2. Parse 63 Primary Target Items
+// 2. Load 63 Excel Targets first to get target names
+const excelPath = path.join(__dirname, 'Data_63_Objek_POD_dari_KMZ_GoogleMaps.xlsx');
+const wb = xlsx.readFile(excelPath);
+const sheet = wb.Sheets['63 Objek POD'];
+const rawData = xlsx.utils.sheet_to_json(sheet);
+
 const targetNamesSet = new Set();
+rawData.forEach((d) => {
+  if (d['Nama POD']) targetNamesSet.add(d['Nama POD'].trim().toLowerCase());
+});
+
+// 3. Parse ALL 517 points from Data-Ada/Prioritas Area POD.kmz
+const zip517 = new AdmZip(path.join(__dirname, 'Data-Ada', 'Prioritas Area POD.kmz'));
+const kml517 = zip517.readAsText('doc.kml');
+const placemarks517 = kml517.split('<Placemark');
+
+const kamparAll181 = [];
+const sumutAll336 = [];
+const kamparIndex = {};
+
+const RAW_FIELD_KEYS = [
+  'FID',
+  'ID_POD',
+  'Name_POD',
+  'Capacity_E',
+  'Capacity_D',
+  'Lat_POD',
+  'Long_POD',
+  'Country_PO',
+  'Province_P',
+  'District_P',
+  'SubDistric',
+  'Village_PO',
+  'Source_POD',
+  'Year_POD',
+  'Type_POD',
+  'Active',
+  'Weightbrid',
+  'Info_Mill',
+  'Phone_Numb',
+  'Contact_In',
+  'Priority',
+  'Survey'
+];
+
+for (let i = 1; i < placemarks517.length; i++) {
+  const pm = placemarks517[i];
+  
+  const rawFields = {};
+  const rowRegex = /<tr[^>]*>\s*<td>\s*([A-Za-z0-9_]+)\s*<\/td>\s*<td>(.*?)<\/td>\s*<\/tr>/gi;
+  let m;
+  while ((m = rowRegex.exec(pm)) !== null) {
+    rawFields[m[1].trim()] = m[2].trim();
+  }
+
+  // Ensure all 22 standard fields exist in rawFields
+  RAW_FIELD_KEYS.forEach(k => {
+    if (rawFields[k] === undefined) rawFields[k] = '';
+  });
+
+  const coordM = pm.match(/<coordinates>\s*([0-9\.\-]+),([0-9\.\-]+)/);
+  const lat = coordM ? parseFloat(coordM[2]) : parseFloat(rawFields.Lat_POD || 0);
+  const lng = coordM ? parseFloat(coordM[1]) : parseFloat(rawFields.Long_POD || 0);
+  const dist = rawFields.District_P || '';
+  const name = rawFields.Name_POD || '';
+  const isTarget = targetNamesSet.has(name.toLowerCase());
+  const utm = latLonToUTM(lat, lng);
+
+  const entry = {
+    fid: rawFields.FID || String(i),
+    id_pod: rawFields.ID_POD || `POD${String(i).padStart(5, '0')}`,
+    nama_pod: name,
+    provinsi: rawFields.Province_P || 'Riau',
+    kabupaten: dist || 'Kampar',
+    kecamatan: rawFields.SubDistric || 'Kampar',
+    desa: rawFields.Village_PO || '',
+    jenis_pod: rawFields.Type_POD || 'Ramp',
+    active: rawFields.Active || 'Dilakukan Survey',
+    priority: rawFields.Priority || 'Priority 1',
+    source: rawFields.Source_POD || 'POD Survey',
+    year: rawFields.Year_POD || '2026',
+    info_mill: rawFields.Info_Mill || '',
+    capacity_e: rawFields.Capacity_E || '',
+    capacity_d: rawFields.Capacity_D || '',
+    weightbrid: rawFields.Weightbrid || '',
+    phone: rawFields.Phone_Numb || '',
+    contact: rawFields.Contact_In || '',
+    survey_status: rawFields.Survey || 'Belum Di Survey',
+    raw_fields: rawFields,
+    lat: lat,
+    lng: lng,
+    utm_zone: utm.zone,
+    utm_easting: utm.easting,
+    utm_northing: utm.northing,
+    utm_string: utm.utmFull,
+    is_target_63: isTarget,
+    google_maps_url: `https://www.google.com/maps?q=${lat},${lng}`,
+    google_nav_url: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`,
+    waze_url: `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`
+  };
+
+  if (dist.toLowerCase() === 'kampar') {
+    kamparAll181.push(entry);
+    kamparIndex[name.toLowerCase()] = entry;
+    if (entry.id_pod) kamparIndex[entry.id_pod.toLowerCase()] = entry;
+  } else {
+    sumutAll336.push(entry);
+  }
+}
+
+// 4. Build 63 Primary Target Items from Excel, enriched with 181 DB
+function parseKMZ(txt) {
+  const res = {};
+  const patterns = [
+    ['FID', /FID\s+(\d+)/],
+    ['ID_POD', /ID_POD\s+([A-Za-z0-9_]+)/],
+    ['Name_POD', /Name_POD\s+(.*?)\s+(Capacity_E|Lat_POD)/],
+    ['District', /District_P\s+([A-Za-z\s]+?)\s+SubDistric/],
+    ['SubDistrict', /SubDistric\s+([A-Za-z\s]+?)\s+Village_PO/],
+    ['Village', /Village_PO\s+([A-Za-z\s]+?)\s+Source_POD/],
+    ['Type_POD', /Type_POD\s+([A-Za-z\s]+?)\s+Active/],
+    ['Priority', /Priority\s+(Priority\s+\d+|[^\s]+)/],
+    ['SurveyStatus', /Survey\s+(Belum Di Survey|Sudah Di Survey|.*?)(?:\s+function|$)/]
+  ];
+  for (const [key, reg] of patterns) {
+    const m = (txt || '').match(reg);
+    if (m) res[key] = m[1].trim();
+  }
+  return res;
+}
+
 const rawList = rawData.map((d, index) => {
   const kmz = parseKMZ(d['Keterangan KMZ'] || '');
   const lat = parseFloat(d['Latitude']);
@@ -138,14 +242,46 @@ const rawList = rawData.map((d, index) => {
       : `https://www.google.com/maps?q=${lat},${lng}`;
 
   const namaPod = d['Nama POD'] ? d['Nama POD'].trim() : '';
-  targetNamesSet.add(namaPod.toLowerCase());
+  const idPod = kmz.ID_POD || `POD${String(index + 1).padStart(5, '0')}`;
+
+  // Lookup in 181 DB
+  let matched181 = kamparIndex[namaPod.toLowerCase()] || kamparIndex[idPod.toLowerCase()];
+  if (!matched181) {
+    // try finding by lat/lng proximity
+    matched181 = kamparAll181.find(k => Math.abs(k.lat - lat) < 0.001 && Math.abs(k.lng - lng) < 0.001);
+  }
+
+  const rawFields = matched181 ? { ...matched181.raw_fields } : {
+    FID: kmz.FID || String(index),
+    ID_POD: idPod,
+    Name_POD: namaPod,
+    Capacity_E: '',
+    Capacity_D: '',
+    Lat_POD: String(lat),
+    Long_POD: String(lng),
+    Country_PO: 'Indonesia',
+    Province_P: 'Riau',
+    District_P: kmz.District || 'Kampar',
+    SubDistric: kmz.SubDistrict || 'Kampar',
+    Village_PO: kmz.Village || '',
+    Source_POD: 'POD Survey',
+    Year_POD: '2026',
+    Type_POD: d['Jenis POD'] ? d['Jenis POD'].trim() : 'Ramp',
+    Active: 'Dilakukan Survey',
+    Weightbrid: '',
+    Info_Mill: '',
+    Phone_Numb: '',
+    Contact_In: '',
+    Priority: kmz.Priority || 'Priority 1',
+    Survey: 'Belum Di Survey'
+  };
 
   return {
     no: d['No'],
-    id_pod: kmz.ID_POD || `POD${String(index + 1).padStart(5, '0')}`,
+    id_pod: idPod,
     fid: kmz.FID !== undefined ? parseInt(kmz.FID) : index,
     nama_pod: namaPod,
-    jenis_pod: d['Jenis POD'] ? d['Jenis POD'].trim() : 'Ramp',
+    jenis_pod: d['Jenis POD'] ? d['Jenis POD'].trim() : (matched181 ? matched181.jenis_pod : 'Ramp'),
     status_survey: 'Belum Dikunjungi',
     status_target: d['Status'] ? d['Status'].trim() : 'Dilakukan',
     lat: lat,
@@ -155,10 +291,12 @@ const rawList = rawData.map((d, index) => {
     utm_northing: utm.northing,
     utm_string: utm.utmFull,
     provinsi: 'Riau',
-    kabupaten: kmz.District || 'Kampar',
-    kecamatan: kmz.SubDistrict || 'Kampar',
-    desa: kmz.Village || '',
-    priority: kmz.Priority || 'Priority 1',
+    kabupaten: kmz.District || (matched181 ? matched181.kabupaten : 'Kampar'),
+    kecamatan: kmz.SubDistrict || (matched181 ? matched181.kecamatan : 'Kampar'),
+    desa: kmz.Village || (matched181 ? matched181.desa : ''),
+    priority: kmz.Priority || (matched181 ? matched181.priority : 'Priority 1'),
+    info_mill: matched181 ? matched181.info_mill : '',
+    raw_fields: rawFields,
     is_target_63: true,
     google_maps_url: gmapsLink,
     google_nav_url: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`,
@@ -166,7 +304,7 @@ const rawList = rawData.map((d, index) => {
   };
 });
 
-// 3. Build Schedule Definitions (Mulai 6 / 7 Oktober)
+// 5. Build Schedule Definitions (Mulai 6 / 7 Oktober)
 const scheduleDefs = [
   {
     day: 1,
@@ -272,60 +410,7 @@ scheduleDefs.forEach((def) => {
   });
 });
 
-// 4. Parse ALL 517 points from Data-Ada/Prioritas Area POD.kmz
-const zip517 = new AdmZip(path.join(__dirname, 'Data-Ada', 'Prioritas Area POD.kmz'));
-const kml517 = zip517.readAsText('doc.kml');
-const placemarks517 = kml517.split('<Placemark');
-
-const kamparAll181 = [];
-const sumutAll336 = [];
-
-for (let i = 1; i < placemarks517.length; i++) {
-  const pm = placemarks517[i];
-  const getField = (name) => {
-    const reg = new RegExp(`${name}<\\/td>\\s*<td>(.*?)<\\/td>`, 'i');
-    const m = pm.match(reg);
-    return m ? m[1].trim() : '';
-  };
-  const coordM = pm.match(/<coordinates>\s*([0-9\.\-]+),([0-9\.\-]+)/);
-  const lat = coordM ? parseFloat(coordM[2]) : parseFloat(getField('Lat_POD'));
-  const lng = coordM ? parseFloat(coordM[1]) : parseFloat(getField('Long_POD'));
-  const dist = getField('District_P');
-  const name = getField('Name_POD');
-  const isTarget = targetNamesSet.has(name.toLowerCase());
-  const utm = latLonToUTM(lat, lng);
-
-  const entry = {
-    fid: getField('FID'),
-    id_pod: getField('ID_POD'),
-    nama_pod: name,
-    provinsi: getField('Province_P'),
-    kabupaten: dist,
-    kecamatan: getField('SubDistric'),
-    desa: getField('Village_PO'),
-    jenis_pod: getField('Type_POD') || 'Ramp',
-    active: getField('Active'),
-    priority: getField('Priority'),
-    source: getField('Source_POD'),
-    year: getField('Year_POD'),
-    info_mill: getField('Info_Mill'),
-    lat: lat,
-    lng: lng,
-    utm_string: utm.utmFull,
-    is_target_63: isTarget,
-    google_maps_url: `https://www.google.com/maps?q=${lat},${lng}`,
-    google_nav_url: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`,
-    waze_url: `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`
-  };
-
-  if (dist.toLowerCase() === 'kampar') {
-    kamparAll181.push(entry);
-  } else {
-    sumutAll336.push(entry);
-  }
-}
-
-// 5. Group by Kecamatan (13 Target Kecamatan & All 20 Kampar Kecamatan)
+// 6. Group by Kecamatan (13 Target Kecamatan & All 20 Kampar Kecamatan)
 const kecamatanStats = {};
 finalItems.forEach((item) => {
   const kec = item.kecamatan;
@@ -344,7 +429,6 @@ finalItems.forEach((item) => {
   kecamatanStats[kec].points.push(item);
 });
 
-// Also tally all 181 Kampar points per kecamatan
 kamparAll181.forEach((item) => {
   const kec = item.kecamatan;
   if (kecamatanStats[kec]) {
@@ -354,7 +438,7 @@ kamparAll181.forEach((item) => {
 
 const kecamatanList = Object.values(kecamatanStats).sort((a, b) => b.total_titik - a.total_titik);
 
-// 6. Load PKS Prioritas from Data-Ada/PKS Prioritas.kmz
+// 7. Load PKS Prioritas from Data-Ada/PKS Prioritas.kmz
 const pksList = [];
 try {
   const pksZip = new AdmZip(path.join(__dirname, 'Data-Ada', 'PKS Prioritas.kmz'));

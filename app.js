@@ -117,6 +117,7 @@
     setupKecamatanChips();
     setupSearchAndFilters();
     setupMobileModal();
+    setupDetailModal();
     setupExportButtons();
 
     renderTargets();
@@ -404,7 +405,7 @@
           </div>
         </div>
 
-        <h3 class="card-title">${p.nama_pod}</h3>
+        <h3 class="card-title card-title-clickable" title="Klik untuk lihat rincian atribut lengkap">${p.nama_pod}</h3>
         <div class="card-village">
           <span>📍</span>
           <span>${p.desa ? `Desa ${p.desa}, ` : ''}Kec. ${p.kecamatan}</span>
@@ -419,6 +420,10 @@
         </div>
 
         <div class="card-actions-grid">
+          <button type="button" class="btn-detail-card" title="Lihat rincian atribut lengkap (22 data)">
+            <span>📄</span>
+            <span>Detail</span>
+          </button>
           <a href="${p.google_nav_url}" target="_blank" rel="noopener noreferrer" class="btn-gmaps">
             <span>🧭</span>
             <span>Google Maps</span>
@@ -437,6 +442,14 @@
           <input type="text" class="note-input-inline" placeholder="Catatan lapangan (opsional, contoh: Buka, ada timbangan)..." value="${note}">
         </div>
       `;
+
+      card.querySelector('.card-title-clickable').addEventListener('click', () => {
+        openDetailModal(p.id_pod);
+      });
+
+      card.querySelector('.btn-detail-card').addEventListener('click', () => {
+        openDetailModal(p.id_pod);
+      });
 
       card.querySelector('.btn-copy-coords').addEventListener('click', () => {
         const textToCopy = `Lat: ${p.lat}, Long: ${p.lng} | UTM: ${p.utm_string} (${p.nama_pod})`;
@@ -483,12 +496,14 @@
         attributionControl: false
       }).setView([0.35, 101.25], 10);
 
-      State.osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19
+      State.osmLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['0', '1', '2', '3']
       });
 
-      State.satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 19
+      State.satelliteLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['0', '1', '2', '3']
       });
 
       // Default: OSM
@@ -591,11 +606,13 @@
       const marker = L.marker([p.lat, p.lng], { icon: markerIcon }).addTo(State.mapInstance);
 
       marker.bindPopup(`
-        <div style="font-family: sans-serif; min-width: 220px; padding: 4px;">
+        <div style="font-family: sans-serif; min-width: 230px; padding: 4px;">
           <div style="font-size: 11px; font-weight: 800; color: ${kecCol}; text-transform: uppercase;">
             ${p.label_urutan ? `${p.label_urutan} • ` : ''}Kec. ${p.kecamatan}
           </div>
-          <h4 style="margin: 4px 0 2px; font-size: 15px; font-weight: 800; color: #0f172a;">${p.nama_pod}</h4>
+          <h4 style="margin: 4px 0 2px; font-size: 15px; font-weight: 800; color: #0f172a; cursor: pointer;" id="btn-popup-title-${p.id_pod}" title="Klik untuk lihat detail lengkap">
+            ${p.nama_pod}
+          </h4>
           <p style="margin: 0 0 6px; font-size: 12px; color: #475569;">
             ${p.desa ? `Desa ${p.desa}` : ''} (${p.jenis_pod})<br>
             ${isPrimary ? '<strong style="color: #059669;">🎯 Target Utama Survei</strong>' : `<span style="color: #64748b;">🏛️ Survei Lalu (${p.year || '2023'})</span>`}
@@ -604,7 +621,7 @@
           <div style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; color: #334155; margin-bottom: 8px;">
             ${p.utm_string}
           </div>
-          <div style="display: flex; gap: 6px;">
+          <div style="display: flex; gap: 6px; margin-bottom: 6px;">
             <a href="${p.google_nav_url}" target="_blank" rel="noopener noreferrer" style="flex: 2; background: #059669; color: #fff; text-decoration: none; padding: 8px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; text-align: center; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
               🧭 Google Maps
             </a>
@@ -612,13 +629,16 @@
               ${isDone ? '✓ Selesai' : 'Tandai'}
             </button>
           </div>
+          <button id="btn-popup-detail-${p.id_pod}" style="width: 100%; background: #eff6ff; color: #1d4ed8; border: 1.5px solid #bfdbfe; padding: 7px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
+            📄 Lihat Detail Informasi (22 Data)
+          </button>
         </div>
       `);
 
       marker.on('popupopen', () => {
-        const btn = document.getElementById(`btn-popup-toggle-${p.id_pod}`);
-        if (btn) {
-          btn.addEventListener('click', () => {
+        const btnToggle = document.getElementById(`btn-popup-toggle-${p.id_pod}`);
+        if (btnToggle) {
+          btnToggle.addEventListener('click', () => {
             if (State.visited[p.id_pod]) {
               delete State.visited[p.id_pod];
             } else {
@@ -630,6 +650,20 @@
             updateCounterBadges();
             marker.closePopup();
             showToast('Status diperbarui!');
+          });
+        }
+
+        const btnDetail = document.getElementById(`btn-popup-detail-${p.id_pod}`);
+        if (btnDetail) {
+          btnDetail.addEventListener('click', () => {
+            openDetailModal(p.id_pod);
+          });
+        }
+
+        const titleEl = document.getElementById(`btn-popup-title-${p.id_pod}`);
+        if (titleEl) {
+          titleEl.addEventListener('click', () => {
+            openDetailModal(p.id_pod);
           });
         }
       });
@@ -867,6 +901,195 @@
         navigator.clipboard.writeText(ip).then(() => {
           showToast('Alamat URL disalin ke clipboard!');
         });
+      });
+    }
+  }
+
+  const RAW_ATTR_KEYS = [
+    'FID',
+    'ID_POD',
+    'Name_POD',
+    'Capacity_E',
+    'Capacity_D',
+    'Lat_POD',
+    'Long_POD',
+    'Country_PO',
+    'Province_P',
+    'District_P',
+    'SubDistric',
+    'Village_PO',
+    'Source_POD',
+    'Year_POD',
+    'Type_POD',
+    'Active',
+    'Weightbrid',
+    'Info_Mill',
+    'Phone_Numb',
+    'Contact_In',
+    'Priority',
+    'Survey'
+  ];
+
+  function findPointById(id_pod) {
+    if (!id_pod) return null;
+    let p = State.masterList.find((item) => item.id_pod === id_pod);
+    if (!p) {
+      p = State.kamparAll181.find((item) => item.id_pod === id_pod);
+    }
+    return p;
+  }
+
+  function openDetailModal(id_pod) {
+    const p = findPointById(id_pod);
+    if (!p) {
+      showToast('Data titik tidak ditemukan');
+      return;
+    }
+
+    const modal = document.getElementById('pod-detail-modal');
+    if (!modal) return;
+
+    const isDone = !!State.visited[p.id_pod];
+
+    // Set Header
+    const nameEl = document.getElementById('modal-detail-name');
+    const subEl = document.getElementById('modal-detail-sub');
+    const tableNameEl = document.getElementById('kmz-table-header-name');
+    const tbodyEl = document.getElementById('kmz-table-tbody');
+
+    if (nameEl) nameEl.textContent = p.nama_pod;
+    if (tableNameEl) tableNameEl.textContent = p.nama_pod;
+    if (subEl) {
+      subEl.innerHTML = `${p.label_urutan ? `<strong>${p.label_urutan}</strong> • ` : ''}Kec. ${p.kecamatan}${p.desa ? `, Desa ${p.desa}` : ''} • ID: ${p.id_pod}`;
+    }
+
+    // Build raw attributes dictionary
+    const raw = p.raw_fields || {};
+    const latStr = p.lat ? (p.lat.toFixed ? p.lat.toFixed(5) : String(p.lat)) : '';
+    const lngStr = p.lng ? (p.lng.toFixed ? p.lng.toFixed(5) : String(p.lng)) : '';
+
+    const attrData = {
+      FID: raw.FID !== undefined ? raw.FID : (p.fid !== undefined ? p.fid : ''),
+      ID_POD: raw.ID_POD || p.id_pod || '',
+      Name_POD: raw.Name_POD || p.nama_pod || '',
+      Capacity_E: raw.Capacity_E || p.capacity_e || '',
+      Capacity_D: raw.Capacity_D || p.capacity_d || '',
+      Lat_POD: raw.Lat_POD || latStr,
+      Long_POD: raw.Long_POD || lngStr,
+      Country_PO: raw.Country_PO || 'Indonesia',
+      Province_P: raw.Province_P || p.provinsi || 'Riau',
+      District_P: raw.District_P || p.kabupaten || 'Kampar',
+      SubDistric: raw.SubDistric || p.kecamatan || '',
+      Village_PO: raw.Village_PO || p.desa || '',
+      Source_POD: raw.Source_POD || p.source || 'POD Survey',
+      Year_POD: raw.Year_POD || p.year || '2026',
+      Type_POD: raw.Type_POD || p.jenis_pod || 'Ramp',
+      Active: raw.Active || p.active || 'Dilakukan Survey',
+      Weightbrid: raw.Weightbrid || p.weightbrid || '',
+      Info_Mill: raw.Info_Mill || p.info_mill || '',
+      Phone_Numb: raw.Phone_Numb || p.phone || '',
+      Contact_In: raw.Contact_In || p.contact || '',
+      Priority: raw.Priority || p.priority || 'Priority 1',
+      Survey: raw.Survey || p.survey_status || (isDone ? 'Sudah Dikunjungi' : 'Belum Di Survey')
+    };
+
+    if (tbodyEl) {
+      tbodyEl.innerHTML = '';
+      RAW_ATTR_KEYS.forEach((key, idx) => {
+        const val = attrData[key] !== undefined ? attrData[key] : '';
+        const tr = document.createElement('tr');
+        // Alternating row background matching Image 1 (odd index: 1, 3, 5... highlighted)
+        if (idx % 2 === 1) {
+          tr.className = 'highlight-row';
+        }
+
+        const tdKey = document.createElement('td');
+        tdKey.className = 'attr-key';
+        tdKey.textContent = key;
+
+        const tdVal = document.createElement('td');
+        tdVal.className = `attr-val ${!val ? 'empty-val' : ''}`;
+        tdVal.textContent = val || '';
+
+        tr.appendChild(tdKey);
+        tr.appendChild(tdVal);
+        tbodyEl.appendChild(tr);
+      });
+    }
+
+    // Set Footer Buttons
+    const btnGmaps = document.getElementById('btn-detail-gmaps');
+    const btnWaze = document.getElementById('btn-detail-waze');
+    const btnCopy = document.getElementById('btn-detail-copy');
+    const btnToggle = document.getElementById('btn-detail-toggle-done');
+    const btnToggleIcon = document.getElementById('btn-detail-toggle-icon');
+    const btnToggleText = document.getElementById('btn-detail-toggle-text');
+
+    if (btnGmaps) {
+      btnGmaps.href = p.google_nav_url || `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=driving`;
+    }
+    if (btnWaze) {
+      btnWaze.href = p.waze_url || `https://waze.com/ul?ll=${p.lat},${p.lng}&navigate=yes`;
+    }
+
+    function updateModalDoneBtn() {
+      const currentDone = !!State.visited[p.id_pod];
+      if (btnToggle) {
+        btnToggle.classList.toggle('is-done', currentDone);
+      }
+      if (btnToggleIcon) {
+        btnToggleIcon.textContent = currentDone ? '✅' : '🟡';
+      }
+      if (btnToggleText) {
+        btnToggleText.textContent = currentDone ? 'Selesai Dikunjungi' : 'Tandai Selesai';
+      }
+    }
+    updateModalDoneBtn();
+
+    if (btnToggle) {
+      btnToggle.onclick = () => {
+        if (State.visited[p.id_pod]) {
+          delete State.visited[p.id_pod];
+        } else {
+          State.visited[p.id_pod] = new Date().toISOString();
+        }
+        saveLocalData();
+        renderTargets();
+        renderMapMarkers();
+        updateCounterBadges();
+        updateModalDoneBtn();
+        showToast('Status survei diperbarui!');
+      };
+    }
+
+    if (btnCopy) {
+      btnCopy.onclick = () => {
+        let text = `📋 INFORMASI TITIK POD: ${p.nama_pod}\n`;
+        text += `------------------------------------\n`;
+        RAW_ATTR_KEYS.forEach((k) => {
+          text += `${k}: ${attrData[k] || '-'}\n`;
+        });
+        text += `Google Maps: ${p.google_maps_url || ''}\n`;
+        navigator.clipboard.writeText(text).then(() => {
+          showToast('Seluruh data atribut disalin!');
+        });
+      };
+    }
+
+    modal.classList.add('active');
+  }
+
+  function setupDetailModal() {
+    const modal = document.getElementById('pod-detail-modal');
+    const btnClose = document.getElementById('btn-close-detail-modal');
+    if (btnClose && modal) {
+      btnClose.addEventListener('click', () => {
+        modal.classList.remove('active');
+      });
+    }
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.classList.remove('active');
       });
     }
   }
