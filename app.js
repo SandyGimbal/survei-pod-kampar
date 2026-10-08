@@ -13,13 +13,18 @@
   const State = {
     masterList: [], // 63 primary targets
     kamparAll181: [], // 181 Kampar points from 517 database
+    tapungPrioritas78: [], // 78 Tapung priority points from Data-Prioritas
+    scheduleTapung: [], // 7-day schedule for Tapung Raya
+    kecamatanTapungList: [], // Tapung subdistricts summary
+    tapungBoundariesGeojson: null, // Boundary polygons from TapungPOD.kmz
     kecamatanList: [],
     schedule: [],
     pksList: [],
     visited: {},
     notes: {},
     activeTab: 'map', // 'map', 'targets', 'summary'
-    viewDataset: 'TARGET63', // 'TARGET63' or 'ALL181'
+    viewDataset: 'TAPUNG78', // 'TAPUNG78' (Default), 'TARGET63', or 'ALL181'
+    selectedPriority: 'ALL', // 'ALL', 'GAR', 'Priority 1', 'Priority 2'
     selectedKecamatan: 'ALL',
     selectedVillage: 'ALL',
     selectedDay: 'ALL',
@@ -30,30 +35,53 @@
     userMarker: null,
     currentLayer: 'osm',
     osmLayer: null,
-    satelliteLayer: null
+    satelliteLayer: null,
+    boundaryLayer: null,
+    showBoundaries: true
   };
 
   const KEC_COLORS = {
+    Tapung: '#ea580c',        // 🟧 Jingga / Deep Orange (41 Titik)
+    'Tapung Hulu': '#2563eb', // 🟦 Biru / Royal Blue (28 Titik)
+    'Tapung Hilir': '#9333ea',// 🟪 Ungu / Vivid Violet (9 Titik)
     'Perhentian Raja': '#059669',
-    Tambang: '#2563eb',
+    Tambang: '#0284c7',
     Kampa: '#d97706',
-    Bangkinang: '#9333ea',
+    Bangkinang: '#7c3aed',
     'Rumbio Jaya': '#0891b2',
     'Siak Hulu': '#dc2626',
     Salo: '#4f46e5',
     Kampar: '#16a34a',
-    'Kampar Utara': '#ea580c',
-    'Xiii Koto Kampar': '#0284c7',
-    'Bangkinang Kota': '#7c3aed',
+    'Kampar Utara': '#f97316',
+    'Xiii Koto Kampar': '#0369a1',
+    'Bangkinang Kota': '#6d28d9',
     Kuok: '#b91c1c',
     'Koto Kampar Hulu': '#0d9488',
-    Tapung: '#d97706',
-    'Tapung Hulu': '#b45309',
-    'Tapung Hilir': '#92400e',
     'Kampar Kiri Hilir': '#047857',
     'Gunung Sahilan': '#15803d',
     'Kampar Kiri Tengah': '#166534',
     'Kampar Kiri': '#14532d'
+  };
+
+  const TAPUNG_RAYA_CONFIG = {
+    Tapung: {
+      color: '#ea580c',
+      badge: '🟧',
+      total: 41,
+      label: 'Kecamatan Tapung'
+    },
+    'Tapung Hulu': {
+      color: '#2563eb',
+      badge: '🟦',
+      total: 28,
+      label: 'Kecamatan Tapung Hulu'
+    },
+    'Tapung Hilir': {
+      color: '#9333ea',
+      badge: '🟪',
+      total: 9,
+      label: 'Kecamatan Tapung Hilir'
+    }
   };
 
   function showToast(msg) {
@@ -94,7 +122,19 @@
   }
 
   function getActiveDataset() {
-    return State.viewDataset === 'ALL181' ? State.kamparAll181 : State.masterList;
+    if (State.viewDataset === 'TAPUNG78') return State.tapungPrioritas78;
+    if (State.viewDataset === 'ALL181') return State.kamparAll181;
+    return State.masterList;
+  }
+
+  function getActiveSchedule() {
+    if (State.viewDataset === 'TAPUNG78') return State.scheduleTapung;
+    return State.schedule;
+  }
+
+  function getActiveKecamatanList() {
+    if (State.viewDataset === 'TAPUNG78') return State.kecamatanTapungList;
+    return State.kecamatanList;
   }
 
   function initApp() {
@@ -104,6 +144,10 @@
     }
 
     const data = window.POD_SURVEY_MASTER_DATA;
+    State.tapungPrioritas78 = data.tapung_prioritas_78 || [];
+    State.scheduleTapung = data.schedule_tapung || [];
+    State.kecamatanTapungList = data.kecamatan_tapung_list || [];
+    State.tapungBoundariesGeojson = data.tapung_boundaries_geojson || null;
     State.masterList = data.pod_list || [];
     State.kamparAll181 = data.kampar_all_181 || [];
     State.kecamatanList = data.kecamatan_list || [];
@@ -114,8 +158,11 @@
 
     setupTabs();
     setupDatasetSwitcher();
+    setupPriorityChips();
     setupKecamatanChips();
+    setupLegendTapung();
     setupSearchAndFilters();
+    setupDayFilterBar();
     setupMobileModal();
     setupDetailModal();
     setupExportButtons();
@@ -159,32 +206,227 @@
   }
 
   function setupDatasetSwitcher() {
+    const btnTapung = document.getElementById('btn-dataset-tapung');
     const btn63 = document.getElementById('btn-dataset-63');
     const btn181 = document.getElementById('btn-dataset-181');
+    const subtitleEl = document.getElementById('app-subtitle-main');
 
-    if (btn63 && btn181) {
-      btn63.addEventListener('click', () => {
-        State.viewDataset = 'TARGET63';
-        btn63.classList.add('active');
-        btn181.classList.remove('active');
-        setupKecamatanChips();
-        renderTargets();
-        renderMapMarkers();
-        updateCounterBadges();
-        showToast('Menampilkan 63 Titik Target Utama');
-      });
-
-      btn181.addEventListener('click', () => {
-        State.viewDataset = 'ALL181';
-        btn181.classList.add('active');
-        btn63.classList.remove('active');
-        setupKecamatanChips();
-        renderTargets();
-        renderMapMarkers();
-        updateCounterBadges();
-        showToast('Menampilkan Semua 181 Titik Kampar (Hasil Survei Sebelumnya)');
+    function setActiveBtn(activeBtn) {
+      [btnTapung, btn63, btn181].forEach((b) => {
+        if (b) b.classList.toggle('active', b === activeBtn);
       });
     }
+
+    if (btnTapung) {
+      btnTapung.addEventListener('click', () => {
+        State.viewDataset = 'TAPUNG78';
+        State.selectedKecamatan = 'ALL';
+        State.selectedVillage = 'ALL';
+        State.selectedPriority = 'ALL';
+        State.selectedDay = 'ALL';
+        setActiveBtn(btnTapung);
+        if (subtitleEl) {
+          subtitleEl.textContent = '⭐ Prioritas Minggu Ini: Tapung Raya • 78 Titik POD';
+        }
+        const legendBox = document.getElementById('map-tapung-legend-box');
+        if (legendBox) legendBox.style.display = 'flex';
+
+        if (State.boundaryLayer && State.mapInstance && !State.mapInstance.hasLayer(State.boundaryLayer)) {
+          State.boundaryLayer.addTo(State.mapInstance);
+          State.showBoundaries = true;
+          const bText = document.getElementById('boundary-toggle-text');
+          if (bText) bText.textContent = 'Batas Wilayah';
+          const btnB = document.getElementById('btn-map-boundary-toggle');
+          if (btnB) btnB.classList.add('active');
+        }
+        highlightBoundaryPolygon('ALL');
+        setupPriorityChips();
+        setupKecamatanChips();
+        setupDayFilterBar();
+        renderTargets();
+        renderMapMarkers();
+        renderKecamatanSummary();
+        updateCounterBadges();
+        showToast('⭐ Menampilkan Prioritas Minggu Ini: Tapung Raya (78 Titik)');
+        setTimeout(() => {
+          if (State.mapInstance) {
+            if (State.boundaryLayer) {
+              State.mapInstance.fitBounds(State.boundaryLayer.getBounds(), { padding: [35, 35] });
+            } else {
+              const pts = State.tapungPrioritas78.map((p) => [p.lat, p.lng]);
+              if (pts.length > 0) State.mapInstance.fitBounds(L.latLngBounds(pts), { padding: [35, 35] });
+            }
+          }
+        }, 120);
+      });
+    }
+
+    if (btn63) {
+      btn63.addEventListener('click', () => {
+        State.viewDataset = 'TARGET63';
+        State.selectedKecamatan = 'ALL';
+        State.selectedVillage = 'ALL';
+        State.selectedPriority = 'ALL';
+        State.selectedDay = 'ALL';
+        setActiveBtn(btn63);
+        if (subtitleEl) {
+          subtitleEl.textContent = '🎯 Target Awal: 63 Titik • 13 Kecamatan • Mulai 6-7 Okt';
+        }
+        const legendBox = document.getElementById('map-tapung-legend-box');
+        if (legendBox) legendBox.style.display = 'none';
+
+        setupPriorityChips();
+        setupKecamatanChips();
+        setupDayFilterBar();
+        renderTargets();
+        renderMapMarkers();
+        renderKecamatanSummary();
+        updateCounterBadges();
+        showToast('Menampilkan 63 Titik Target Awal');
+        setTimeout(() => {
+          if (State.mapInstance) {
+            const pts = State.masterList.map((p) => [p.lat, p.lng]);
+            if (pts.length > 0) State.mapInstance.fitBounds(L.latLngBounds(pts), { padding: [35, 35] });
+          }
+        }, 120);
+      });
+    }
+
+    if (btn181) {
+      btn181.addEventListener('click', () => {
+        State.viewDataset = 'ALL181';
+        State.selectedKecamatan = 'ALL';
+        State.selectedVillage = 'ALL';
+        State.selectedPriority = 'ALL';
+        State.selectedDay = 'ALL';
+        setActiveBtn(btn181);
+        if (subtitleEl) {
+          subtitleEl.textContent = '🏛️ Semua Kampar: 181 Titik POD (Database Lapangan)';
+        }
+        const legendBox = document.getElementById('map-tapung-legend-box');
+        if (legendBox) legendBox.style.display = 'none';
+
+        setupPriorityChips();
+        setupKecamatanChips();
+        setupDayFilterBar();
+        renderTargets();
+        renderMapMarkers();
+        renderKecamatanSummary();
+        updateCounterBadges();
+        showToast('Menampilkan Semua 181 Titik Kampar (Database Lapangan)');
+        setTimeout(() => {
+          if (State.mapInstance) {
+            const pts = State.kamparAll181.map((p) => [p.lat, p.lng]);
+            if (pts.length > 0) State.mapInstance.fitBounds(L.latLngBounds(pts), { padding: [35, 35] });
+          }
+        }, 120);
+      });
+    }
+  }
+
+  function setupPriorityChips() {
+    const container = document.getElementById('priority-chips-scroll');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const currentData = getActiveDataset();
+    const prioCounts = {};
+    currentData.forEach((p) => {
+      const pr = p.priority || 'Lainnya';
+      prioCounts[pr] = (prioCounts[pr] || 0) + 1;
+    });
+
+    // "Semua Prioritas" chip
+    const allChip = document.createElement('button');
+    allChip.type = 'button';
+    allChip.className = `chip-priority ${State.selectedPriority === 'ALL' ? 'active' : ''}`;
+    allChip.innerHTML = `<span>⭐ Semua</span> <strong>(${currentData.length})</strong>`;
+    allChip.addEventListener('click', () => {
+      State.selectedPriority = 'ALL';
+      document.querySelectorAll('.chip-priority').forEach((c) => c.classList.remove('active'));
+      allChip.classList.add('active');
+      renderTargets();
+      filterMapMarkers();
+      showToast('Menampilkan semua tingkat prioritas');
+    });
+    container.appendChild(allChip);
+
+    // Specific chips for GAR, Priority 1, Priority 2 if present
+    const prioKeys = Object.keys(prioCounts).sort((a, b) => {
+      if (a === 'GAR') return -1;
+      if (b === 'GAR') return 1;
+      return a.localeCompare(b);
+    });
+
+    prioKeys.forEach((k) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      let extraClass = '';
+      let icon = '📌';
+      if (k === 'GAR') {
+        extraClass = 'gar';
+        icon = '🔥';
+      } else if (k === 'Priority 1') {
+        extraClass = 'p1';
+        icon = '⚡';
+      } else if (k === 'Priority 2') {
+        extraClass = 'p2';
+        icon = '📍';
+      }
+
+      chip.className = `chip-priority ${extraClass} ${State.selectedPriority === k ? 'active' : ''}`;
+      chip.innerHTML = `<span>${icon} ${k}</span> <strong>(${prioCounts[k]})</strong>`;
+      chip.addEventListener('click', () => {
+        State.selectedPriority = k;
+        document.querySelectorAll('.chip-priority').forEach((c) => c.classList.remove('active'));
+        chip.classList.add('active');
+        renderTargets();
+        filterMapMarkers();
+        showToast(`Filter Prioritas: ${k} (${prioCounts[k]} titik)`);
+      });
+      container.appendChild(chip);
+    });
+  }
+
+  function setupDayFilterBar() {
+    const container = document.getElementById('day-schedule-filter-bar');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const sched = getActiveSchedule();
+    if (!sched || sched.length === 0) return;
+
+    // "Semua Hari"
+    const allDayBtn = document.createElement('button');
+    allDayBtn.type = 'button';
+    allDayBtn.className = `chip-day-filter ${State.selectedDay === 'ALL' ? 'active' : ''}`;
+    allDayBtn.innerHTML = `<span>📅 Semua Hari</span>`;
+    allDayBtn.addEventListener('click', () => {
+      State.selectedDay = 'ALL';
+      document.querySelectorAll('.chip-day-filter').forEach((c) => c.classList.remove('active'));
+      allDayBtn.classList.add('active');
+      renderTargets();
+      filterMapMarkers();
+      showToast('Menampilkan target seluruh hari');
+    });
+    container.appendChild(allDayBtn);
+
+    sched.forEach((s) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `chip-day-filter ${State.selectedDay === s.hari.toString() ? 'active' : ''}`;
+      btn.innerHTML = `<span>Hari ${s.hari}</span> <strong>(${s.jumlah_titik})</strong>`;
+      btn.addEventListener('click', () => {
+        State.selectedDay = s.hari.toString();
+        document.querySelectorAll('.chip-day-filter').forEach((c) => c.classList.remove('active'));
+        btn.classList.add('active');
+        renderTargets();
+        filterMapMarkers();
+        switchTab('targets');
+        showToast(`Menampilkan Target Hari ke-${s.hari} (${s.jumlah_titik} titik)`);
+      });
+      container.appendChild(btn);
+    });
   }
 
   function setupKecamatanChips() {
@@ -299,6 +541,78 @@
     });
   }
 
+  function highlightBoundaryPolygon(kecName) {
+    if (!State.boundaryLayer || !State.mapInstance) return;
+    State.boundaryLayer.eachLayer((layer) => {
+      const name = layer.feature && layer.feature.properties ? layer.feature.properties.name : '';
+      const cfg = TAPUNG_RAYA_CONFIG[name] || { color: '#059669' };
+      if (!kecName || kecName === 'ALL') {
+        layer.setStyle({
+          color: cfg.color,
+          weight: 2.8,
+          opacity: 0.95,
+          fillColor: cfg.color,
+          fillOpacity: 0.15,
+          dashArray: '6, 6'
+        });
+      } else if (name === kecName) {
+        layer.setStyle({
+          color: cfg.color,
+          weight: 4.5,
+          opacity: 1,
+          fillColor: cfg.color,
+          fillOpacity: 0.28,
+          dashArray: ''
+        });
+        if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+          layer.bringToFront();
+        }
+      } else {
+        layer.setStyle({
+          color: cfg.color,
+          weight: 1.5,
+          opacity: 0.35,
+          fillColor: cfg.color,
+          fillOpacity: 0.04,
+          dashArray: '4, 6'
+        });
+      }
+    });
+  }
+
+  function setupLegendTapung() {
+    const legendBtns = document.querySelectorAll('.legend-kec-btn');
+    legendBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const kec = btn.getAttribute('data-kec');
+        if (State.selectedKecamatan === kec) {
+          State.selectedKecamatan = 'ALL';
+          State.selectedVillage = 'ALL';
+          showToast('Menampilkan seluruh 78 titik Tapung Raya');
+        } else {
+          State.selectedKecamatan = kec;
+          State.selectedVillage = 'ALL';
+          const cfg = TAPUNG_RAYA_CONFIG[kec];
+          showToast(`${cfg ? cfg.badge : '📍'} Fokus Wilayah: Kec. ${kec} (${cfg ? cfg.total : ''} titik)`);
+        }
+        updateActiveChips();
+        setupVillageSubfilter();
+        renderTargets();
+        filterMapMarkers();
+        highlightBoundaryPolygon(State.selectedKecamatan);
+
+        if (State.selectedKecamatan !== 'ALL' && State.mapInstance && State.boundaryLayer) {
+          State.boundaryLayer.eachLayer((layer) => {
+            const name = layer.feature && layer.feature.properties ? layer.feature.properties.name : '';
+            if (name === State.selectedKecamatan) {
+              State.mapInstance.fitBounds(layer.getBounds(), { padding: [35, 35] });
+            }
+          });
+        }
+      });
+    });
+  }
+
   function updateActiveChips() {
     document.querySelectorAll('.kec-chip').forEach((chip) => {
       const isAll = chip.textContent.includes('Semua');
@@ -308,6 +622,13 @@
         chip.classList.toggle('active', chip.textContent.includes(State.selectedKecamatan));
       }
     });
+
+    document.querySelectorAll('.legend-kec-btn').forEach((btn) => {
+      const k = btn.getAttribute('data-kec');
+      btn.classList.toggle('active', State.selectedKecamatan === k);
+    });
+
+    highlightBoundaryPolygon(State.selectedKecamatan);
   }
 
   function setupSearchAndFilters() {
@@ -341,6 +662,9 @@
       if (State.selectedVillage !== 'ALL' && p.desa !== State.selectedVillage) {
         return false;
       }
+      if (State.selectedPriority !== 'ALL' && p.priority !== State.selectedPriority) {
+        return false;
+      }
       if (State.selectedDay !== 'ALL' && p.hari_ke && p.hari_ke !== parseInt(State.selectedDay, 10)) {
         return false;
       }
@@ -349,7 +673,7 @@
       if (State.selectedStatus === 'PENDING' && isDone) return false;
 
       if (State.searchQuery) {
-        const text = `${p.nama_pod} ${p.id_pod} ${p.desa} ${p.kecamatan} ${p.label_urutan || ''}`.toLowerCase();
+        const text = `${p.nama_pod} ${p.id_pod} ${p.desa} ${p.kecamatan} ${p.priority || ''} ${p.info_mill || ''} ${p.label_urutan || ''}`.toLowerCase();
         if (!text.includes(State.searchQuery)) return false;
       }
       return true;
@@ -376,7 +700,7 @@
         <div style="background: #ffffff; border-radius: 12px; padding: 30px; text-align: center; color: #64748b;">
           <div style="font-size: 32px; margin-bottom: 8px;">🔍</div>
           <h4 style="color: #1e293b;">Tidak ada titik yang sesuai filter</h4>
-          <p style="font-size: 13px; margin-top: 4px;">Coba ganti filter kecamatan atau hapus kata pencarian.</p>
+          <p style="font-size: 13px; margin-top: 4px;">Coba ganti filter prioritas, kecamatan, atau hapus kata pencarian.</p>
         </div>
       `;
       return;
@@ -384,28 +708,41 @@
 
     points.forEach((p) => {
       const isDone = !!State.visited[p.id_pod];
-      const isPrimary = p.is_target_63;
+      const isPrimary = p.is_target_63 || p.is_tapung_prioritas;
       const note = State.notes[p.id_pod] || '';
       const card = document.createElement('div');
       card.className = `target-card ${isDone ? 'completed' : ''}`;
       card.id = `card-${p.id_pod}`;
 
       const kecCol = KEC_COLORS[p.kecamatan] || '#059669';
+      card.style.borderLeft = `4.5px solid ${kecCol}`;
+
+      let prioBadgeHtml = '';
+      if (p.priority === 'GAR') {
+        prioBadgeHtml = '<span class="badge-target-flag" style="background: #b45309; color: #ffffff;">🔥 GAR Prioritas</span>';
+      } else if (p.priority === 'Priority 1') {
+        prioBadgeHtml = '<span class="badge-target-flag" style="background: #047857; color: #ffffff;">⚡ Priority 1</span>';
+      } else if (p.priority === 'Priority 2') {
+        prioBadgeHtml = '<span class="badge-target-flag" style="background: #2563eb; color: #ffffff;">📌 Priority 2</span>';
+      }
+
+      const kecBadgeText = p.kecamatan === 'Tapung' ? '🟧 Tapung' : p.kecamatan === 'Tapung Hulu' ? '🟦 Tapung Hulu' : p.kecamatan === 'Tapung Hilir' ? '🟪 Tapung Hilir' : p.kecamatan;
 
       card.innerHTML = `
         <div class="card-top-row">
           <div class="card-meta-badges">
-            ${p.label_urutan ? `<span class="badge-code">${p.label_urutan}</span>` : ''}
-            <span class="badge-kecamatan" style="background: ${kecCol}18; color: ${kecCol};">${p.kecamatan}</span>
+            ${p.label_urutan ? `<span class="badge-code" style="background: #0f172a; color: #ffffff;">${p.label_urutan}</span>` : ''}
+            ${prioBadgeHtml}
+            <span class="badge-kecamatan" style="background: ${kecCol}18; color: ${kecCol}; border: 1px solid ${kecCol}40; font-weight: 800;">${kecBadgeText}</span>
             <span class="badge-jenis">${p.jenis_pod}</span>
-            ${isPrimary ? '<span class="badge-target-flag">🎯 Target Utama</span>' : `<span class="badge-prev-flag">🏛️ Survei Lalu (${p.year || '2023'})</span>`}
+            ${p.is_tapung_prioritas ? `<span class="badge-target-flag" style="background: ${kecCol}; color: #ffffff;">⭐ Prioritas ${p.kecamatan}</span>` : isPrimary ? '<span class="badge-target-flag">🎯 Target Utama</span>' : `<span class="badge-prev-flag">🏛️ Survei Lalu (${p.year || '2023'})</span>`}
           </div>
           <div style="font-size: 11px; font-family: monospace; color: #64748b; font-weight: 700;">
             ${p.id_pod}
           </div>
         </div>
 
-        <h3 class="card-title card-title-clickable" title="Klik untuk lihat rincian atribut lengkap">${p.nama_pod}</h3>
+        <h3 class="card-title">${p.nama_pod}</h3>
         <div class="card-village">
           <span>📍</span>
           <span>${p.desa ? `Desa ${p.desa}, ` : ''}Kec. ${p.kecamatan}</span>
@@ -420,10 +757,6 @@
         </div>
 
         <div class="card-actions-grid">
-          <button type="button" class="btn-detail-card" title="Lihat rincian atribut lengkap (22 data)">
-            <span>📄</span>
-            <span>Detail</span>
-          </button>
           <a href="${p.google_nav_url}" target="_blank" rel="noopener noreferrer" class="btn-gmaps">
             <span>🧭</span>
             <span>Google Maps</span>
@@ -442,14 +775,6 @@
           <input type="text" class="note-input-inline" placeholder="Catatan lapangan (opsional, contoh: Buka, ada timbangan)..." value="${note}">
         </div>
       `;
-
-      card.querySelector('.card-title-clickable').addEventListener('click', () => {
-        openDetailModal(p.id_pod);
-      });
-
-      card.querySelector('.btn-detail-card').addEventListener('click', () => {
-        openDetailModal(p.id_pod);
-      });
 
       card.querySelector('.btn-copy-coords').addEventListener('click', () => {
         const textToCopy = `Lat: ${p.lat}, Long: ${p.lng} | UTM: ${p.utm_string} (${p.nama_pod})`;
@@ -530,10 +855,109 @@
         `);
       });
 
+      // Add Boundary Polygons from Data-Prioritas/TapungPOD.kmz
+      if (State.tapungBoundariesGeojson && !State.boundaryLayer) {
+        State.boundaryLayer = L.geoJSON(State.tapungBoundariesGeojson, {
+          style: function (f) {
+            const name = f.properties.name || '';
+            const cfg = TAPUNG_RAYA_CONFIG[name] || { color: '#059669' };
+            const isSelected = State.selectedKecamatan === name;
+            return {
+              color: cfg.color,
+              weight: isSelected ? 4 : 2.8,
+              opacity: 0.95,
+              fillColor: cfg.color,
+              fillOpacity: isSelected ? 0.28 : 0.15,
+              dashArray: isSelected ? '' : '6, 6'
+            };
+          },
+          onEachFeature: function (f, layer) {
+            const name = f.properties.name || '';
+            const cfg = TAPUNG_RAYA_CONFIG[name] || { color: '#334155', total: 0, badge: '📍' };
+            layer.bindTooltip(`
+              <div style="font-family: inherit; font-size: 12px; line-height: 1.4; padding: 2px;">
+                <div style="font-weight: 800; color: ${cfg.color}; font-size: 13px;">${cfg.badge} Batas Administrasi Kec. ${name}</div>
+                <div style="color: #475569; font-size: 11.5px; margin-top: 2px;">
+                  Wilayah Prioritas Minggu Ini • <strong>${cfg.total} Titik POD</strong>
+                </div>
+                <div style="font-size: 10.5px; color: #94a3b8; margin-top: 3px;">Klik poligon untuk fokus wilayah ini</div>
+              </div>
+            `, {
+              sticky: true,
+              className: 'custom-boundary-tooltip'
+            });
+
+            layer.on({
+              mouseover: function (e) {
+                const l = e.target;
+                l.setStyle({
+                  weight: 4.5,
+                  fillOpacity: 0.32,
+                  dashArray: ''
+                });
+                if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                  l.bringToFront();
+                }
+              },
+              mouseout: function (e) {
+                if (State.boundaryLayer) {
+                  highlightBoundaryPolygon(State.selectedKecamatan);
+                }
+              },
+              click: function () {
+                if (State.selectedKecamatan === name) {
+                  State.selectedKecamatan = 'ALL';
+                  State.selectedVillage = 'ALL';
+                  showToast('Menampilkan seluruh 78 titik Tapung Raya');
+                } else {
+                  State.selectedKecamatan = name;
+                  State.selectedVillage = 'ALL';
+                  showToast(`${cfg.badge} Fokus Wilayah: Kec. ${name} (${cfg.total} titik)`);
+                }
+                updateActiveChips();
+                setupVillageSubfilter();
+                renderTargets();
+                filterMapMarkers();
+                highlightBoundaryPolygon(State.selectedKecamatan);
+
+                if (State.selectedKecamatan !== 'ALL' && State.mapInstance) {
+                  State.mapInstance.fitBounds(layer.getBounds(), { padding: [35, 35] });
+                }
+              }
+            });
+          }
+        });
+
+        if (State.showBoundaries) {
+          State.boundaryLayer.addTo(State.mapInstance);
+        }
+      }
+
       const btnLocate = document.getElementById('btn-map-locate-me');
       if (btnLocate) {
         btnLocate.addEventListener('click', () => {
           getUserLocationOnMap();
+        });
+      }
+
+      const btnBoundary = document.getElementById('btn-map-boundary-toggle');
+      if (btnBoundary) {
+        btnBoundary.addEventListener('click', () => {
+          if (!State.boundaryLayer) return;
+          const bText = document.getElementById('boundary-toggle-text');
+          if (State.showBoundaries) {
+            State.mapInstance.removeLayer(State.boundaryLayer);
+            State.showBoundaries = false;
+            btnBoundary.classList.remove('active');
+            if (bText) bText.textContent = 'Batas: OFF';
+            showToast('Batas Wilayah disembunyikan');
+          } else {
+            State.boundaryLayer.addTo(State.mapInstance);
+            State.showBoundaries = true;
+            btnBoundary.classList.add('active');
+            if (bText) bText.textContent = 'Batas Wilayah';
+            showToast('Batas Wilayah Tapung Raya ditampilkan 🗺️');
+          }
         });
       }
 
@@ -588,40 +1012,60 @@
 
     currentData.forEach((p) => {
       const isDone = !!State.visited[p.id_pod];
-      const isPrimary = p.is_target_63;
+      const isPrimary = p.is_target_63 || p.is_tapung_prioritas;
       const kecCol = KEC_COLORS[p.kecamatan] || '#059669';
-      const col = isDone ? '#10b981' : isPrimary ? kecCol : '#64748b';
 
-      const label = isDone ? '✓' : p.urutan_hari ? p.urutan_hari : '•';
+      let pinHtml = '';
+      if (isDone) {
+        pinHtml = `<div style="background-color: ${kecCol}; color: #ffffff; width: 30px; height: 30px; border-radius: 50%; border: 3px solid #10b981; box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.55), 0 3px 8px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px;">
+          ✓
+        </div>`;
+      } else {
+        const label = p.urutan_hari ? p.urutan_hari : '•';
+        pinHtml = `<div style="background-color: ${kecCol}; color: #ffffff; width: ${isPrimary ? '28px' : '22px'}; height: ${isPrimary ? '28px' : '22px'}; border-radius: 50%; border: 2.5px solid #ffffff; box-shadow: 0 3px 8px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 11px;">
+          ${label}
+        </div>`;
+      }
 
       const markerIcon = L.divIcon({
         className: 'custom-map-pin',
-        html: `<div style="background-color: ${col}; color: #ffffff; width: ${isPrimary ? '28px' : '22px'}; height: ${isPrimary ? '28px' : '22px'}; border-radius: 50%; border: 2px solid #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 11px; box-shadow: 0 2px 6px rgba(0,0,0,0.35);">
-                ${label}
-               </div>`,
-        iconSize: [28, 28],
-        iconAnchor: [14, 14]
+        html: pinHtml,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
       });
 
       const marker = L.marker([p.lat, p.lng], { icon: markerIcon }).addTo(State.mapInstance);
 
+      let prioTagPopup = '';
+      if (p.priority === 'GAR') {
+        prioTagPopup = '<span style="background: #b45309; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold;">🔥 GAR Prioritas</span>';
+      } else if (p.priority === 'Priority 1') {
+        prioTagPopup = '<span style="background: #047857; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold;">⚡ Priority 1</span>';
+      } else if (p.priority === 'Priority 2') {
+        prioTagPopup = '<span style="background: #2563eb; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold;">📌 Priority 2</span>';
+      }
+
+      const kecBadgeInfo = p.kecamatan === 'Tapung' ? '🟧 41 Titik' : p.kecamatan === 'Tapung Hulu' ? '🟦 28 Titik' : p.kecamatan === 'Tapung Hilir' ? '🟪 9 Titik' : '';
+
       marker.bindPopup(`
-        <div style="font-family: sans-serif; min-width: 230px; padding: 4px;">
-          <div style="font-size: 11px; font-weight: 800; color: ${kecCol}; text-transform: uppercase;">
-            ${p.label_urutan ? `${p.label_urutan} • ` : ''}Kec. ${p.kecamatan}
+        <div style="font-family: sans-serif; min-width: 235px; padding: 4px;">
+          <div style="font-size: 11px; font-weight: 800; color: ${kecCol}; text-transform: uppercase; margin-bottom: 3px; display: flex; align-items: center; justify-content: space-between;">
+            <span>${p.label_urutan ? `${p.label_urutan} • ` : ''}Kec. ${p.kecamatan}</span>
+            ${kecBadgeInfo ? `<span style="font-size: 10px; background: ${kecCol}20; color: ${kecCol}; padding: 2px 6px; border-radius: 4px; font-weight: 800;">${kecBadgeInfo}</span>` : ''}
           </div>
-          <h4 style="margin: 4px 0 2px; font-size: 15px; font-weight: 800; color: #0f172a; cursor: pointer;" id="btn-popup-title-${p.id_pod}" title="Klik untuk lihat detail lengkap">
+          <div style="margin-bottom: 4px;">${prioTagPopup}</div>
+          <h4 style="margin: 4px 0 2px; font-size: 15px; font-weight: 800; color: #0f172a;">
             ${p.nama_pod}
           </h4>
           <p style="margin: 0 0 6px; font-size: 12px; color: #475569;">
             ${p.desa ? `Desa ${p.desa}` : ''} (${p.jenis_pod})<br>
-            ${isPrimary ? '<strong style="color: #059669;">🎯 Target Utama Survei</strong>' : `<span style="color: #64748b;">🏛️ Survei Lalu (${p.year || '2023'})</span>`}
-            ${p.info_mill ? `<br><span style="color: #d97706;">🏭 Mill: ${p.info_mill}</span>` : ''}
+            ${p.is_tapung_prioritas ? `<strong style="color: ${kecCol};">⭐ Prioritas Tapung Raya (${p.kecamatan})</strong>` : isPrimary ? '<strong style="color: #059669;">🎯 Target Utama Survei</strong>' : `<span style="color: #64748b;">🏛️ Survei Lalu (${p.year || '2023'})</span>`}
+            ${p.info_mill ? `<br><span style="color: #d97706; font-weight: bold;">🏭 Mill: ${p.info_mill}</span>` : ''}
           </p>
           <div style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; color: #334155; margin-bottom: 8px;">
             ${p.utm_string}
           </div>
-          <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+          <div style="display: flex; gap: 6px;">
             <a href="${p.google_nav_url}" target="_blank" rel="noopener noreferrer" style="flex: 2; background: #059669; color: #fff; text-decoration: none; padding: 8px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; text-align: center; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
               🧭 Google Maps
             </a>
@@ -629,9 +1073,6 @@
               ${isDone ? '✓ Selesai' : 'Tandai'}
             </button>
           </div>
-          <button id="btn-popup-detail-${p.id_pod}" style="width: 100%; background: #eff6ff; color: #1d4ed8; border: 1.5px solid #bfdbfe; padding: 7px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
-            📄 Lihat Detail Informasi (22 Data)
-          </button>
         </div>
       `);
 
@@ -650,20 +1091,6 @@
             updateCounterBadges();
             marker.closePopup();
             showToast('Status diperbarui!');
-          });
-        }
-
-        const btnDetail = document.getElementById(`btn-popup-detail-${p.id_pod}`);
-        if (btnDetail) {
-          btnDetail.addEventListener('click', () => {
-            openDetailModal(p.id_pod);
-          });
-        }
-
-        const titleEl = document.getElementById(`btn-popup-title-${p.id_pod}`);
-        if (titleEl) {
-          titleEl.addEventListener('click', () => {
-            openDetailModal(p.id_pod);
           });
         }
       });
@@ -700,7 +1127,12 @@
 
     const infoPill = document.getElementById('map-bottom-info');
     if (infoPill) {
-      infoPill.innerHTML = `<span>📍 Menampilkan <strong>${filtered.length}</strong> titik di peta (${State.viewDataset === 'ALL181' ? 'Database 181 Kampar' : 'Target 63'})</span>`;
+      const dsLabel = State.viewDataset === 'TAPUNG78'
+        ? 'Prioritas Minggu Ini: Tapung Raya'
+        : State.viewDataset === 'ALL181'
+        ? 'Database 181 Kampar'
+        : 'Target 63 Titik';
+      infoPill.innerHTML = `<span>📍 Menampilkan <strong>${filtered.length}</strong> titik di peta (${dsLabel})</span>`;
     }
   }
 
@@ -749,13 +1181,34 @@
     if (!container) return;
     container.innerHTML = '';
 
-    State.kecamatanList.forEach((k) => {
+    const kecTitleEl = document.getElementById('summary-kecamatan-title');
+    if (kecTitleEl) {
+      kecTitleEl.textContent = State.viewDataset === 'TAPUNG78'
+        ? 'Rincian Titik Fokus Tapung Raya (3 Kecamatan • 24 Desa)'
+        : 'Rincian Titik per Kecamatan (13 Kecamatan Target Awal)';
+    }
+
+    const schedTitleEl = document.getElementById('summary-schedule-title');
+    if (schedTitleEl) {
+      schedTitleEl.textContent = State.viewDataset === 'TAPUNG78'
+        ? 'Jadwal Target & Rute Operasional Tapung Raya (78 Titik • Hari 1 - 7)'
+        : 'Jadwal Rute Survei (Mulai 6 - 7 Oktober 2026)';
+    }
+
+    const currentKecList = getActiveKecamatanList();
+    const currentData = getActiveDataset();
+
+    currentKecList.forEach((k) => {
       const card = document.createElement('div');
       card.className = 'kecamatan-card-box';
       const kecCol = KEC_COLORS[k.nama_kecamatan] || '#059669';
+      card.style.borderLeft = `5px solid ${kecCol}`;
+
+      const cfg = TAPUNG_RAYA_CONFIG[k.nama_kecamatan];
+      const emojiBadge = cfg ? cfg.badge + ' ' : '';
 
       const doneInKec = k.points.filter((p) => !!State.visited[p.id_pod]).length;
-      const pct = Math.round((doneInKec / k.total_titik) * 100);
+      const pct = k.total_titik > 0 ? Math.round((doneInKec / k.total_titik) * 100) : 0;
 
       const villageBadgesHtml = Object.entries(k.desa_list)
         .sort((a, b) => b[1] - a[1])
@@ -767,8 +1220,8 @@
 
       card.innerHTML = `
         <div class="kec-card-top">
-          <span class="kec-card-name" style="color: ${kecCol};">${k.nama_kecamatan}</span>
-          <span class="kec-card-count">${k.total_titik} Titik Target</span>
+          <span class="kec-card-name" style="color: ${kecCol};">${emojiBadge}${k.nama_kecamatan}</span>
+          <span class="kec-card-count" style="background: ${kecCol}18; color: ${kecCol}; font-weight: 800;">${k.total_titik} Titik Target</span>
         </div>
         <div class="kec-villages-list" style="margin-bottom: 8px;">
           <div style="font-weight: 700; margin-bottom: 4px; color: #1e293b;">Daftar Desa (${Object.keys(k.desa_list).length} Desa):</div>
@@ -821,10 +1274,11 @@
     const scheduleContainer = document.getElementById('schedule-timeline-container');
     if (scheduleContainer) {
       scheduleContainer.innerHTML = '';
-      State.schedule.forEach((s) => {
+      const activeSched = getActiveSchedule();
+      activeSched.forEach((s) => {
         const item = document.createElement('div');
         item.className = 'day-timeline-card';
-        const dayPoints = State.masterList.filter((p) => p.hari_ke === s.hari);
+        const dayPoints = currentData.filter((p) => p.hari_ke === s.hari);
         const dayDone = dayPoints.filter((p) => !!State.visited[p.id_pod]).length;
 
         item.innerHTML = `
@@ -834,6 +1288,9 @@
           </div>
           <h4 class="day-timeline-title">${s.judul}</h4>
           <p class="day-timeline-corridor">${s.koridor}</p>
+          <div style="font-size: 11.5px; color: #64748b; margin-bottom: 6px;">
+            <span>📍 Mulai: <strong>${s.titik_mulai || '-'}</strong> ➔ Selesai: <strong>${s.titik_akhir || '-'}</strong></span>
+          </div>
           <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; padding-top: 8px; border-top: 1px solid #f1f5f9;">
             <span>🎯 <strong>${s.jumlah_titik} Titik</strong> (~${s.estimasi_jarak_km} km)</span>
             <span style="font-weight: 700; color: ${dayDone === s.jumlah_titik ? '#059669' : '#d97706'};">
@@ -843,6 +1300,9 @@
         `;
         item.addEventListener('click', () => {
           State.selectedDay = s.hari.toString();
+          document.querySelectorAll('.chip-day-filter').forEach((c) => {
+            c.classList.toggle('active', c.textContent.includes(`Hari ${s.hari}`));
+          });
           switchTab('targets');
           showToast(`Filter: Hari ke-${s.hari} (${s.jumlah_titik} titik)`);
         });
@@ -1126,13 +1586,14 @@
         'ID POD': p.id_pod,
         'Nama POD': p.nama_pod,
         'Jenis POD': p.jenis_pod,
+        'Prioritas': p.priority || '-',
+        'Info Mill / PKS': p.info_mill || '-',
         Kecamatan: p.kecamatan,
         Desa: p.desa,
         Kabupaten: p.kabupaten,
-        'Target Utama 63': p.is_target_63 ? 'Ya' : 'Tidak (Database)',
+        'Kategori': p.is_tapung_prioritas ? 'Prioritas Tapung Raya' : p.is_target_63 ? 'Target Awal 63' : 'Database Lapangan',
         'Tahun Data': p.year || '2026',
         'Sumber Data': p.source || 'POD Survey',
-        'Info Mill / PKS': p.info_mill || '',
         'Status Survei': isDone ? 'Sudah Dikunjungi' : 'Belum Dikunjungi',
         'Waktu Kunjungan': visitedDate ? new Date(visitedDate).toLocaleString('id-ID') : '',
         'Catatan Lapangan': State.notes[p.id_pod] || '',
@@ -1145,26 +1606,52 @@
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows);
-    XLSX.utils.book_append_sheet(wb, ws, 'Target_POD_Kampar');
-    XLSX.writeFile(wb, `Survei_POD_Kampar_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    const sheetName = State.viewDataset === 'TAPUNG78' ? 'Prioritas_Tapung_78' : 'Target_POD_Kampar';
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    const filename = State.viewDataset === 'TAPUNG78'
+      ? `Prioritas_78_Tapung_Raya_${new Date().toISOString().slice(0, 10)}.xlsx`
+      : `Survei_POD_Kampar_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(wb, filename);
     showToast('File Excel berhasil diunduh! 📊');
   }
 
   function copyWhatsAppReport() {
-    const total = State.masterList.length;
-    const done = Object.keys(State.visited).length;
-    const pct = Math.round((done / total) * 100);
+    const currentData = getActiveDataset();
+    const total = currentData.length;
+    const done = currentData.filter((p) => !!State.visited[p.id_pod]).length;
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    const currentKec = getActiveKecamatanList();
+    const currentSched = getActiveSchedule();
 
     let txt = `📋 *LAPORAN PROGRESS SURVEI POD KAMPAR*\n`;
+    if (State.viewDataset === 'TAPUNG78') {
+      txt += `⭐ *FOKUS: PRIORITAS TAPUNG RAYA (78 TITIK)*\n`;
+    }
     txt += `📅 Update: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}\n`;
     txt += `------------------------------------\n`;
-    txt += `🎯 *Total Kunjungan Target*: ${done} / ${total} Titik (${pct}%)\n\n`;
+    txt += `🎯 *Total Target Selesai*: ${done} / ${total} Titik (${pct}%)\n`;
+    txt += `⏳ *Sisa Belum Selesai*: ${total - done} Titik\n\n`;
 
-    txt += `📍 *Rincian per Kecamatan*:\n`;
-    State.kecamatanList.forEach((k) => {
+    txt += `📍 *Progress per Kecamatan*:\n`;
+    currentKec.forEach((k) => {
       const kDone = k.points.filter((p) => !!State.visited[p.id_pod]).length;
-      txt += `• *Kec. ${k.nama_kecamatan}*: ${kDone}/${k.total_titik} titik\n`;
+      txt += `• *Kec. ${k.nama_kecamatan}*: ${kDone}/${k.total_titik} titik (${k.total_titik > 0 ? Math.round(kDone / k.total_titik * 100) : 0}%)\n`;
     });
+
+    if (currentSched && currentSched.length > 0) {
+      txt += `\n🗓️ *Progress Jadwal Harian*:\n`;
+      currentSched.forEach((s) => {
+        const dPoints = currentData.filter((p) => p.hari_ke === s.hari);
+        const dDone = dPoints.filter((p) => !!State.visited[p.id_pod]).length;
+        txt += `• *Hari ${s.hari}* (${s.tanggal.split(',')[0]}): ${dDone}/${s.jumlah_titik} titik\n`;
+      });
+    }
+
+    const garDone = currentData.filter((p) => p.priority === 'GAR' && !!State.visited[p.id_pod]).length;
+    const garTotal = currentData.filter((p) => p.priority === 'GAR').length;
+    if (garTotal > 0) {
+      txt += `\n🔥 *Prioritas GAR*: ${garDone}/${garTotal} selesai\n`;
+    }
 
     navigator.clipboard.writeText(txt).then(() => {
       showToast('Laporan WA disalin! Tinggal tempel di WhatsApp.');

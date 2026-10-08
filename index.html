@@ -29,8 +29,8 @@
       <div class="brand-section">
         <div class="brand-logo">🌴</div>
         <div class="brand-titles">
-          <h1>POD Navigator Kampar</h1>
-          <p>63 Titik • 13 Kecamatan • Mulai 6-7 Okt</p>
+          <h1 id="app-title-main">POD Navigator Kampar</h1>
+          <p id="app-subtitle-main">⭐ Prioritas Minggu Ini: Tapung Raya • 78 Titik POD</p>
         </div>
       </div>
       <div class="header-action-buttons">
@@ -64,24 +64,32 @@
 
     <!-- Sticky Filter & Search Bar (Shared across views) -->
     <div class="filter-sticky-bar">
-      <!-- Dataset Mode Switcher: 63 Target Utama vs 181 Semua Kampar -->
+      <!-- Dataset Mode Switcher: Tapung 78 Prioritas vs 63 Target Utama vs 181 Semua Kampar -->
       <div class="dataset-switcher-bar">
-        <button type="button" class="btn-dataset-switch active" id="btn-dataset-63">
-          <span>🎯 Target Utama (63 Titik)</span>
+        <button type="button" class="btn-dataset-switch prioritas-btn active" id="btn-dataset-tapung">
+          <span>⭐ Prioritas Minggu Ini: Tapung Raya (78)</span>
+        </button>
+        <button type="button" class="btn-dataset-switch" id="btn-dataset-63">
+          <span>🎯 Target Awal (63)</span>
         </button>
         <button type="button" class="btn-dataset-switch" id="btn-dataset-181">
-          <span>🏛️ Semua Kampar (181 Titik)</span>
+          <span>🏛️ Semua Kampar (181)</span>
         </button>
       </div>
 
       <div class="search-box-wrapper">
         <span class="search-icon-inside">🔍</span>
-        <input type="text" id="search-target-input" class="search-box-input" placeholder="Cari nama POD, ID, desa, atau kecamatan...">
+        <input type="text" id="search-target-input" class="search-box-input" placeholder="Cari nama POD, ID, desa, kecamatan, atau prioritas...">
       </div>
 
-      <!-- Horizontal Scrolling Chips for 13 Kecamatan -->
+      <!-- Priority Filter Chips (GAR, P1, P2) -->
+      <div class="priority-chips-scroll" id="priority-chips-scroll">
+        <!-- Populated dynamically -->
+      </div>
+
+      <!-- Horizontal Scrolling Chips for Kecamatan -->
       <div class="filter-chips-scroll" id="kecamatan-chips-scroll">
-        <!-- Populated dynamically: Semua, Perhentian Raja, Tambang, Kampa, etc. -->
+        <!-- Populated dynamically: Semua, Tapung, Tapung Hulu, Tapung Hilir, etc. -->
       </div>
 
       <!-- Sub-Filter Bar for Villages (Desa) -->
@@ -97,7 +105,7 @@
           <button type="button" class="btn-status-filter" data-status="DONE">✅ Selesai</button>
         </div>
         <div class="status-counter-text" id="status-counter-text">
-          Menampilkan: <strong>63</strong> titik • Selesai: <strong id="global-progress-badge">0/63</strong>
+          Menampilkan: <strong>78</strong> titik • Selesai: <strong id="global-progress-badge">0/78</strong>
         </div>
       </div>
 
@@ -105,7 +113,7 @@
       <div class="progress-meter-box">
         <div class="progress-meter-header">
           <span class="progress-meter-title">⚡ Progres Kunjungan Survei</span>
-          <span class="progress-meter-val" id="progress-percentage-val">0% (0/63 Selesai)</span>
+          <span class="progress-meter-val" id="progress-percentage-val">0% (0/78 Selesai)</span>
         </div>
         <div class="progress-meter-track">
           <div class="progress-meter-bar" id="progress-meter-bar" style="width: 0%;"></div>
@@ -118,6 +126,30 @@
       <div class="map-page-wrapper">
         <div id="leaflet-map" class="leaflet-map-canvas"></div>
         
+        <!-- Legend Wilayah & Batas 3 Kecamatan Prioritas Tapung Raya -->
+        <div class="map-tapung-legend-box" id="map-tapung-legend-box">
+          <div class="legend-box-header">
+            <span class="legend-box-title">🗺️ Prioritas Wilayah & Batas (78 Titik)</span>
+          </div>
+          <div class="legend-box-items">
+            <button type="button" class="legend-kec-btn" data-kec="Tapung" title="Fokus & Batas Kec. Tapung (41 Titik)">
+              <span class="legend-color-dot" style="background: #ea580c;"></span>
+              <span class="legend-kec-label">Tapung</span>
+              <span class="legend-kec-count" style="background: #ffedd5; color: #c2410c;">41</span>
+            </button>
+            <button type="button" class="legend-kec-btn" data-kec="Tapung Hulu" title="Fokus & Batas Kec. Tapung Hulu (28 Titik)">
+              <span class="legend-color-dot" style="background: #2563eb;"></span>
+              <span class="legend-kec-label">Tapung Hulu</span>
+              <span class="legend-kec-count" style="background: #dbeafe; color: #1d4ed8;">28</span>
+            </button>
+            <button type="button" class="legend-kec-btn" data-kec="Tapung Hilir" title="Fokus & Batas Kec. Tapung Hilir (9 Titik)">
+              <span class="legend-color-dot" style="background: #9333ea;"></span>
+              <span class="legend-kec-label">Tapung Hilir</span>
+              <span class="legend-kec-count" style="background: #f3e8ff; color: #7e22ce;">9</span>
+            </button>
+          </div>
+        </div>
+
         <div class="map-floating-controls">
           <button type="button" class="btn-map-control" id="btn-map-locate-me" title="Tampilkan posisi saya saat ini di peta">
             <span>📍</span> Lokasi Saya
@@ -125,14 +157,17 @@
           <button type="button" class="btn-map-control" id="btn-map-layer-toggle" title="Ganti ke Citra Satelit Kebun Sawit">
             <span id="layer-toggle-icon">🛰️</span> <span id="layer-toggle-text">Citra Satelit</span>
           </button>
+          <button type="button" class="btn-map-control active" id="btn-map-boundary-toggle" title="Tampilkan / Sembunyikan Batas Poligon Tapung Raya">
+            <span>🗺️</span> <span id="boundary-toggle-text">Batas Wilayah</span>
+          </button>
           <button type="button" class="btn-map-control" id="btn-map-fit-bounds" title="Pusatkan kembali peta ke titik POD">
             <span>🎯</span> Pusatkan
           </button>
         </div>
 
         <div class="map-bottom-info-pill" id="map-bottom-info">
-          <span>📍 Menampilkan <strong>63</strong> titik POD di peta</span>
-          <span>Semua Kecamatan</span>
+          <span>📍 Menampilkan <strong>78</strong> titik POD di peta</span>
+          <span>Tapung Raya</span>
         </div>
       </div>
     </div>
@@ -149,23 +184,28 @@
       
       <!-- Kecamatan Breakdown Summary -->
       <div class="timeline-section-title">
-        <span>📍</span> Rincian Titik per Kecamatan (13 Kecamatan)
+        <span>📍</span> <span id="summary-kecamatan-title">Rincian Titik per Kecamatan & Wilayah Fokus</span>
       </div>
       <p style="font-size: 13px; color: #64748b; margin-bottom: 14px;">
-        Klik pada kartu kecamatan untuk langsung menyaring daftar target dan melihat posisinya di peta.
+        Klik pada kartu kecamatan atau badge desa untuk langsung menyaring daftar target dan melihat posisinya di peta.
       </p>
 
       <div class="kecamatan-grid-summary" id="kecamatan-summary-grid">
         <!-- Populated dynamically -->
       </div>
 
-      <!-- 7-Day Route Schedule Timeline (Mulai 6 / 7 Oktober) -->
+      <!-- 7-Day Route Schedule Timeline (Mulai 8 Oktober 2026) -->
       <div class="timeline-section-title" style="margin-top: 24px;">
-        <span>🗓️</span> Jadwal Rute Survei (Mulai 6 - 7 Oktober 2026)
+        <span>🗓️</span> <span id="summary-schedule-title">Jadwal Target & Rute Operasional Minggu Ini (78 Titik • Hari 1 - 7)</span>
       </div>
-      <p style="font-size: 13px; color: #64748b; margin-bottom: 14px;">
-        Rekomendasi urutan kerja 10 titik per hari agar efisien di jalan poros kebun sawit:
+      <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">
+        Rekomendasi urutan kerja harian teroptimasi koridor jalan poros kebun sawit. Klik hari untuk menyaring:
       </p>
+
+      <!-- Quick Day Filter Pills Bar -->
+      <div class="day-schedule-filter-bar" id="day-schedule-filter-bar">
+        <!-- Populated dynamically -->
+      </div>
 
       <div id="schedule-timeline-container">
         <!-- Populated dynamically -->
@@ -174,13 +214,16 @@
       <!-- Quick Export & Sharing Bar -->
       <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 18px; margin-top: 24px; text-align: center;">
         <h4 style="font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 6px;">
-          📊 Ekspor & Bagikan Laporan Lapangan
+          📊 Ekspor & Bagikan Target & Laporan Lapangan
         </h4>
         <p style="font-size: 12.5px; color: #64748b; margin-bottom: 14px;">
-          Simpan hasil kunjungan atau kirim rekap perkembangan ke WhatsApp tim/koordinator.
+          Unduh data koordinat untuk navigasi offline di Avenza Maps, ekspor ke Excel, atau kirim rekap ke WhatsApp koordinator.
         </p>
 
         <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+          <a href="Prioritas_78_Tapung_Avenza.kmz" download="Prioritas_78_Tapung_Avenza.kmz" class="btn-waze" id="btn-export-avenza-quick" style="background: #0284c7; padding: 10px 16px; font-size: 13px; text-decoration: none; color: #ffffff; display: inline-flex; align-items: center; gap: 6px;">
+            <span>📱</span> Unduh KMZ Avenza (78 Titik)
+          </a>
           <button type="button" class="btn-gmaps" id="btn-export-excel-quick" style="padding: 10px 16px; font-size: 13px;">
             <span>📊</span> Unduh Excel (.xlsx)
           </button>
@@ -227,8 +270,8 @@
     </div>
   </div>
 
-  <!-- Modal Detail Informasi Titik POD (Image 1 Style) -->
-  <div class="modal-backdrop" id="pod-detail-modal">
+  <!-- Modal Detail Informasi Titik POD (Disembunyikan sementara) -->
+  <div class="modal-backdrop" id="pod-detail-modal" style="display: none !important;">
     <div class="modal-dialog modal-dialog-detail">
       <div class="modal-detail-header">
         <div class="modal-detail-title-group">

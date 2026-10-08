@@ -472,18 +472,290 @@ try {
   console.warn('Could not parse PKS Prioritas.kmz:', e.message);
 }
 
+// 8. Load & Parse Boundary Polygons from Data-Prioritas/TapungPOD.kmz
+let tapungBoundariesGeojson = { type: 'FeatureCollection', features: [] };
+try {
+  const polyZip = new AdmZip(path.join(__dirname, 'Data-Prioritas', 'TapungPOD.kmz'));
+  const polyKml = polyZip.readAsText('doc.kml');
+  const placemarksPoly = polyKml.split('<Placemark');
+  for (let i = 1; i < placemarksPoly.length; i++) {
+    const pm = placemarksPoly[i];
+    const nameM = pm.match(/<name>(.*?)<\/name>/);
+    const name = nameM ? nameM[1].trim() : `Kecamatan ${i}`;
+    const polyMatches = [...pm.matchAll(/<coordinates>(.*?)<\/coordinates>/gs)];
+    if (polyMatches.length === 1) {
+      const raw = polyMatches[0][1].trim().split(/\s+/);
+      const ring = raw.map((pt) => {
+        const parts = pt.split(',');
+        return [
+          parseFloat(parseFloat(parts[0]).toFixed(5)),
+          parseFloat(parseFloat(parts[1]).toFixed(5))
+        ];
+      });
+      tapungBoundariesGeojson.features.push({
+        type: 'Feature',
+        properties: { name: name, kec: name },
+        geometry: { type: 'Polygon', coordinates: [ring] }
+      });
+    } else if (polyMatches.length > 1) {
+      const multi = polyMatches.map((m) => {
+        const raw = m[1].trim().split(/\s+/);
+        const ring = raw.map((pt) => {
+          const parts = pt.split(',');
+          return [
+            parseFloat(parseFloat(parts[0]).toFixed(5)),
+            parseFloat(parseFloat(parts[1]).toFixed(5))
+          ];
+        });
+        return [ring];
+      });
+      tapungBoundariesGeojson.features.push({
+        type: 'Feature',
+        properties: { name: name, kec: name },
+        geometry: { type: 'MultiPolygon', coordinates: multi }
+      });
+    }
+  }
+} catch (e) {
+  console.warn('Could not parse TapungPOD.kmz:', e.message);
+}
+
+// 9. Load & Parse 78 Priority Points from Data-Prioritas/Titik POD.kmz
+const tapungRawList = [];
+try {
+  const ptsZip = new AdmZip(path.join(__dirname, 'Data-Prioritas', 'Titik POD.kmz'));
+  const ptsKml = ptsZip.readAsText('doc.kml');
+  const placemarksPts = ptsKml.split('<Placemark');
+
+  for (let i = 1; i < placemarksPts.length; i++) {
+    const pm = placemarksPts[i];
+    const nameM = pm.match(/<name>(.*?)<\/name>/);
+    const coordM = pm.match(/<coordinates>\s*([0-9\.\-]+),([0-9\.\-]+)/);
+    const rows = {};
+    const reg = /<tr[^>]*>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<\/tr>/gi;
+    let m;
+    while ((m = reg.exec(pm)) !== null) {
+      let val = m[2].trim();
+      if (val === '&lt;Null&gt;' || val === '<Null>') val = '';
+      rows[m[1].trim()] = val;
+    }
+
+    const lat = coordM ? parseFloat(coordM[2]) : parseFloat(rows['Lat_POD'] || 0);
+    const lng = coordM ? parseFloat(coordM[1]) : parseFloat(rows['Long_POD'] || 0);
+    const utm = latLonToUTM(lat, lng);
+    const name = (rows['Name_POD'] || (nameM ? nameM[1] : `POD ${i}`)).trim();
+    const idPod = rows['ID POD'] || `POD${String(i).padStart(5, '0')}`;
+    const kec = rows['SubDistrict_POD'] || 'Tapung';
+    const desa = rows['Village_POD'] || '';
+    const prio = rows['Priority'] || 'Priority 1';
+    const mill = rows['Info Mill'] || '';
+
+    const rawFields = {
+      FID: String(i),
+      ID_POD: idPod,
+      Name_POD: name,
+      Capacity_E: rows['Capacity_Est'] || '',
+      Capacity_D: rows['Capacity_Doc'] || '',
+      Lat_POD: String(lat),
+      Long_POD: String(lng),
+      Country_PO: rows['Country_POD'] || 'Indonesia',
+      Province_P: rows['Province_POD'] || 'Riau',
+      District_P: rows['District_POD'] || 'Kampar',
+      SubDistric: kec,
+      Village_PO: desa,
+      Source_POD: rows['Source_POD'] || 'Google Street View',
+      Year_POD: rows['Year_POD'] || '2025',
+      Type_POD: rows['Type_POD'] || 'Ramp',
+      Active: rows['Active'] || 'Dilakukan Survey',
+      Weightbrid: rows['Weightbridge'] || '',
+      Info_Mill: mill,
+      Phone_Numb: rows['Phone Number'] || '',
+      Contact_In: rows['Contact Information'] || '',
+      Priority: prio,
+      Survey: rows['Survey'] || 'Belum Di Survey'
+    };
+
+    tapungRawList.push({
+      no: i,
+      id_pod: idPod,
+      fid: i,
+      nama_pod: name,
+      jenis_pod: rows['Type_POD'] || 'Ramp',
+      status_survey: 'Belum Dikunjungi',
+      status_target: 'Prioritas Minggu Ini',
+      lat: lat,
+      lng: lng,
+      utm_zone: utm.zone,
+      utm_easting: utm.easting,
+      utm_northing: utm.northing,
+      utm_string: utm.utmFull,
+      provinsi: 'Riau',
+      kabupaten: 'Kampar',
+      kecamatan: kec,
+      desa: desa,
+      priority: prio,
+      info_mill: mill,
+      year: rows['Year_POD'] || '2025',
+      active: rows['Active'] || 'Dilakukan Survey',
+      source: rows['Source_POD'] || 'Google Street View',
+      raw_fields: rawFields,
+      is_tapung_prioritas: true,
+      google_maps_url: `https://www.google.com/maps?q=${lat},${lng}`,
+      google_nav_url: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`,
+      waze_url: `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`
+    });
+  }
+} catch (e) {
+  console.warn('Could not parse Titik POD.kmz:', e.message);
+}
+
+// 10. Build 7-Day Target & Schedule for Tapung Raya (Prioritas Minggu Ini: 78 Titik)
+const tapungScheduleDefs = [
+  {
+    day: 1,
+    dateRange: 'Kamis, 8 Okt 2026',
+    title: 'Hari 1: Tapung Tenggara & Koridor Garuda Sakti',
+    corridor: 'Kec. Tapung (Karya Indah, Bencah Kelubi, Sungai Putih, Sibuak, Sari Galuh)',
+    desc: 'Memulai dari gerbang masuk Jl. Garuda Sakti Km 6 (perbatasan Pekanbaru) menyusuri poros Bencah Kelubi hingga Sari Galuh.',
+    filter: (p) =>
+      p.kecamatan === 'Tapung' &&
+      ['Karya Indah', 'Bencah Kelubi', 'Sungai Putih', 'Sibuak', 'Sari Galuh'].includes(p.desa)
+  },
+  {
+    day: 2,
+    dateRange: 'Jumat, 9 Okt 2026',
+    title: 'Hari 2: Tapung Sentral & Sentra Pantai Cermin',
+    corridor: 'Kec. Tapung (Pantai Cermin & Indra Sakti)',
+    desc: 'Konsentrasi 11 titik di Pantai Cermin di sepanjang jalan poros utama Tapung & simpang TB, dilanjutkan ke Indra Sakti.',
+    filter: (p) =>
+      p.kecamatan === 'Tapung' && ['Pantai Cermin', 'Indra Sakti'].includes(p.desa)
+  },
+  {
+    day: 3,
+    dateRange: 'Sabtu, 10 Okt 2026',
+    title: 'Hari 3: Tapung Barat & Kawasan Petapahan',
+    corridor: 'Kec. Tapung (Tanjung Sawit, Sumber Makmur, Petapahan, Petapahan Jaya)',
+    desc: 'Sentra perkebunan sawit Flamboyan, Simpang Petapahan, Tanjung Sawit & Petapahan Jaya.',
+    filter: (p) =>
+      p.kecamatan === 'Tapung' &&
+      ['Tanjung Sawit', 'Sumber Makmur', 'Petapahan', 'Petapahan Jaya'].includes(p.desa)
+  },
+  {
+    day: 4,
+    dateRange: 'Minggu, 11 Okt 2026',
+    title: 'Hari 4: Tapung Hilir & Koridor Lintas Kandis',
+    corridor: 'Kec. Tapung Hilir (Koto Garo, Suka Maju, Kota Baru, Kijang Jaya, Sekijang)',
+    desc: 'Koridor timur-utara Tapung Hilir dari Koto Garo menyusuri poros jalan Buana hingga Kijang Jaya dan Sekijang.',
+    filter: (p) => p.kecamatan === 'Tapung Hilir'
+  },
+  {
+    day: 5,
+    dateRange: 'Senin, 12 Okt 2026',
+    title: 'Hari 5: Tapung Hulu Sentral & Poros Suram',
+    corridor: 'Kec. Tapung Hulu (Bukit Kemuning, Sukaramai, Kusau Makmur) & Kec. Tapung (Sungai Agung)',
+    desc: 'Jalur poros Suram (Sukaramai) dan kawasan perkebunan rakyat Bukit Kemuning, Kusau Makmur & Sungai Agung.',
+    filter: (p) =>
+      (p.kecamatan === 'Tapung Hulu' &&
+        ['Bukit Kemuning', 'Sukaramai', 'Kusau Makmur'].includes(p.desa)) ||
+      (p.kecamatan === 'Tapung' && p.desa === 'Sungai Agung')
+  },
+  {
+    day: 6,
+    dateRange: 'Selasa, 13 Okt 2026',
+    title: 'Hari 6: Tapung Hulu Barat (Kasikan & Rimba Jaya)',
+    corridor: 'Kec. Tapung Hulu (Desa Kasikan & Rimba Jaya)',
+    desc: 'Ujung barat Tapung Hulu arah perbatasan Rokan Hulu (Tandun). Termasuk alokasi sweep/kunjungan ulang bila ada kendala.',
+    filter: (p) =>
+      p.kecamatan === 'Tapung Hulu' && ['Kasikan', 'Rimba Jaya'].includes(p.desa)
+  },
+  {
+    day: 7,
+    dateRange: 'Rabu, 14 Okt 2026',
+    title: 'Hari 7: Tapung Hulu Utara (Danau Lancang & Senama Nenek)',
+    corridor: 'Kec. Tapung Hulu (Desa Danau Lancang & Senama Nenek)',
+    desc: 'Kawasan perkebunan kelapa sawit terluas di Danau Lancang (10 titik) dan desa adat Senama Nenek (3 titik).',
+    filter: (p) =>
+      p.kecamatan === 'Tapung Hulu' && ['Danau Lancang', 'Senama Nenek'].includes(p.desa)
+  }
+];
+
+let finalTapungItems = [];
+const tapungScheduleSummary = [];
+
+tapungScheduleDefs.forEach((def) => {
+  const matched = tapungRawList.filter(def.filter);
+  const ordered = orderPointsNearestNeighbor(matched);
+
+  let routeDistanceKm = 0;
+  for (let i = 0; i < ordered.length - 1; i++) {
+    routeDistanceKm += haversine(
+      ordered[i].lat,
+      ordered[i].lng,
+      ordered[i + 1].lat,
+      ordered[i + 1].lng
+    );
+  }
+
+  const dayItems = ordered.map((item, idx) => ({
+    ...item,
+    hari_ke: def.day,
+    urutan_hari: idx + 1,
+    label_urutan: `H${def.day}-${String(idx + 1).padStart(2, '0')}`
+  }));
+
+  finalTapungItems = finalTapungItems.concat(dayItems);
+
+  tapungScheduleSummary.push({
+    hari: def.day,
+    tanggal: def.dateRange,
+    judul: def.title,
+    koridor: def.corridor,
+    deskripsi: def.desc,
+    jumlah_titik: dayItems.length,
+    estimasi_jarak_km: Math.round(routeDistanceKm * 10) / 10,
+    titik_mulai: `${dayItems[0].nama_pod} (${dayItems[0].desa})`,
+    titik_akhir: `${dayItems[dayItems.length - 1].nama_pod} (${dayItems[dayItems.length - 1].desa})`,
+    desa_list: [...new Set(dayItems.map((p) => p.desa))].join(', ')
+  });
+});
+
+// Group Tapung by Kecamatan
+const kecTapungStats = {};
+finalTapungItems.forEach((item) => {
+  const kec = item.kecamatan;
+  if (!kecTapungStats[kec]) {
+    kecTapungStats[kec] = {
+      nama_kecamatan: kec,
+      total_titik: 0,
+      desa_list: {},
+      points: []
+    };
+  }
+  kecTapungStats[kec].total_titik += 1;
+  kecTapungStats[kec].desa_list[item.desa || 'Lainnya'] =
+    (kecTapungStats[kec].desa_list[item.desa || 'Lainnya'] || 0) + 1;
+  kecTapungStats[kec].points.push(item);
+});
+const kecamatanTapungList = Object.values(kecTapungStats).sort((a, b) => b.total_titik - a.total_titik);
+
 const masterOutput = {
   metadata: {
+    total_tapung_prioritas: finalTapungItems.length,
     total_objek_target: finalItems.length,
     total_kampar_prioritas: kamparAll181.length,
     total_database_517: placemarks517.length - 1,
     total_kecamatan_target: kecamatanList.length,
     kabupaten: 'Kampar, Riau',
-    target_harian: '10 titik / hari (Mulai 6 - 7 Oktober 2026)',
+    focus_wilayah: 'Tapung Raya (Kec. Tapung, Tapung Hulu, Tapung Hilir)',
+    target_harian: '10 - 14 titik / hari (Prioritas Minggu Ini: Mulai 8 Oktober 2026)',
     mobile_url: 'http://192.168.100.107:3000',
     local_laragon_url: 'http://localhost/Survei-POD/',
     generated_at: new Date().toISOString()
   },
+  tapung_prioritas_78: finalTapungItems,
+  schedule_tapung: tapungScheduleSummary,
+  kecamatan_tapung_list: kecamatanTapungList,
+  tapung_boundaries_geojson: tapungBoundariesGeojson,
   kecamatan_list: kecamatanList,
   schedule: scheduleSummary,
   pks_list: pksList,
@@ -491,7 +763,7 @@ const masterOutput = {
   kampar_all_181: kamparAll181
 };
 
-const outputJs = `// Auto-generated POD Survey Mobile Master Database with 517 History
+const outputJs = `// Auto-generated POD Survey Mobile Master Database with 517 History & Tapung Priority
 window.POD_SURVEY_MASTER_DATA = ${JSON.stringify(masterOutput, null, 2)};
 `;
 
@@ -499,6 +771,8 @@ fs.writeFileSync(path.join(__dirname, 'assets', 'pod_database.js'), outputJs);
 fs.writeFileSync(path.join(__dirname, 'assets', 'pod_database.json'), JSON.stringify(masterOutput, null, 2));
 
 console.log('Successfully updated assets/pod_database.js and assets/pod_database.json');
+console.log('Tapung Prioritas 78:', finalTapungItems.length);
 console.log('Target 63:', finalItems.length);
 console.log('Kampar All 181:', kamparAll181.length);
+console.log('Boundary Polygons:', tapungBoundariesGeojson.features.length);
 console.log('PKS:', pksList.length);
