@@ -738,20 +738,117 @@ finalTapungItems.forEach((item) => {
 });
 const kecamatanTapungList = Object.values(kecTapungStats).sort((a, b) => b.total_titik - a.total_titik);
 
+// 10. Prioritas Khusus Sandy: Kecamatan Tapung (41 Titik, Target 10 / Hari)
+const sandyScheduleDefs = [
+  {
+    day: 1,
+    title: 'Hari 1: Pintu Masuk Timur (Karya Indah ➔ Bencah Kelubi ➔ Sei Putih)',
+    corridor: 'Karya Indah, Bencah Kelubi, Sungai Putih, Pantai Cermin Timur',
+    dateRange: 'Hari 1 • Pintu Masuk Pekanbaru (10 Titik)',
+    startArea: 'Jl. Garuda Sakti Km 7 (Ramp Guston)',
+    desc: 'Mulai dari titik terdekat perbatasan Pekanbaru (Jl. Garuda Sakti). Menyapu bersih 10 titik di Karya Indah, Bencah Kelubi, dan Sungai Putih tanpa perlu masuk jauh ke pedalaman.',
+    filter: (p) =>
+      p.kecamatan === 'Tapung' &&
+      (['Karya Indah', 'Sungai Putih', 'Bencah Kelubi'].includes(p.desa) ||
+        (p.desa === 'Pantai Cermin' && p.lng > 101.20))
+  },
+  {
+    day: 2,
+    title: 'Hari 2: Poros Tengah & Flamboyan (Sari Galuh ➔ Pantai Cermin ➔ Sibuak)',
+    corridor: 'Desa Sari Galuh, Pantai Cermin Selatan/Tengah, Sibuak',
+    dateRange: 'Hari 2 • Kawasan Sari Galuh / Flamboyan (10 Titik)',
+    startArea: 'Desa Sari Galuh (Veron Ms Transport & Vero Garrusso)',
+    desc: 'Menyisir kawasan kebun sawit padat di Sari Galuh (Flamboyan) dan Pantai Cermin poros tengah, lalu melambung ke Sibuak. Akses jalan bagus dan jarak antar-titik rapat (1-3 km).',
+    filter: (p) =>
+      p.kecamatan === 'Tapung' &&
+      (['Sari Galuh', 'Sibuak'].includes(p.desa) ||
+        (p.desa === 'Pantai Cermin' && p.lng >= 101.13 && p.lng <= 101.20 && p.lat < 0.575))
+  },
+  {
+    day: 3,
+    title: 'Hari 3: Koridor Poros Utara (Indra Sakti ➔ Pantai Cermin Utara ➔ Petapahan)',
+    corridor: 'Desa Indra Sakti, Pantai Cermin Utara, Petapahan Timur',
+    dateRange: 'Hari 3 • Poros Utara Simpang Petapahan (10 Titik)',
+    startArea: 'Pantai Cermin Poros Utara (Pod_362 & Peron Simbolon)',
+    desc: 'Menyusuri koridor utara dari Pantai Cermin atas ke Desa Indra Sakti dan jalan lingkar timur Petapahan. Rute melingkar satu arah yang teratur.',
+    filter: (p) =>
+      p.kecamatan === 'Tapung' &&
+      (p.desa === 'Indra Sakti' ||
+        (p.desa === 'Pantai Cermin' && p.lat >= 0.575 && p.lng < 101.20) ||
+        (p.desa === 'Petapahan' && p.lng > 101.05))
+  },
+  {
+    day: 4,
+    title: 'Hari 4: Poros Barat & Target GAR (Tanjung Sawit ➔ Petapahan Jaya ➔ Sungai Agung)',
+    corridor: 'Tanjung Sawit, Sumber Makmur, Petapahan Jaya, Petapahan Barat, Sungai Agung',
+    dateRange: 'Hari 4 • Jalur Prioritas GAR & Pabrik (11 Titik)',
+    startArea: 'Tanjung Sawit (Ramp Ads) & Sumber Makmur (Ramp Syn)',
+    desc: 'Menyelesaikan wilayah barat perbatasan Tapung Hulu. Area ini memuat titik prioritas GAR dan pabrik PKS (PT Karya Cipta Nirvana), berlanjut hingga tuntas di Sungai Agung.',
+    filter: (p) =>
+      p.kecamatan === 'Tapung' &&
+      (['Tanjung Sawit', 'Sumber Makmur', 'Petapahan Jaya', 'Sungai Agung'].includes(p.desa) ||
+        (p.desa === 'Petapahan' && p.lng <= 101.05))
+  }
+];
+
+let finalSandyItems = [];
+const sandyScheduleSummary = [];
+
+sandyScheduleDefs.forEach((def) => {
+  const matched = tapungRawList.filter(def.filter);
+  const ordered = orderPointsNearestNeighbor(matched);
+
+  let routeDistanceKm = 0;
+  for (let i = 0; i < ordered.length - 1; i++) {
+    routeDistanceKm += haversine(
+      ordered[i].lat,
+      ordered[i].lng,
+      ordered[i + 1].lat,
+      ordered[i + 1].lng
+    );
+  }
+
+  const dayItems = ordered.map((item, idx) => ({
+    ...item,
+    hari_ke: def.day,
+    urutan_hari: idx + 1,
+    label_urutan: `H${def.day}-${String(idx + 1).padStart(2, '0')}`,
+    cluster_sandy: def.title.split(':')[1].trim()
+  }));
+
+  finalSandyItems = finalSandyItems.concat(dayItems);
+
+  sandyScheduleSummary.push({
+    hari: def.day,
+    tanggal: def.dateRange,
+    judul: def.title,
+    koridor: def.corridor,
+    deskripsi: def.desc,
+    jumlah_titik: dayItems.length,
+    estimasi_jarak_km: Math.round(routeDistanceKm * 10) / 10,
+    titik_mulai: `${dayItems[0].nama_pod} (${dayItems[0].desa})`,
+    titik_akhir: `${dayItems[dayItems.length - 1].nama_pod} (${dayItems[dayItems.length - 1].desa})`,
+    desa_list: [...new Set(dayItems.map((p) => p.desa))].join(', ')
+  });
+});
+
 const masterOutput = {
   metadata: {
+    total_sandy_tapung: finalSandyItems.length,
     total_tapung_prioritas: finalTapungItems.length,
     total_objek_target: finalItems.length,
     total_kampar_prioritas: kamparAll181.length,
     total_database_517: placemarks517.length - 1,
     total_kecamatan_target: kecamatanList.length,
     kabupaten: 'Kampar, Riau',
-    focus_wilayah: 'Tapung Raya (Kec. Tapung, Tapung Hulu, Tapung Hilir)',
-    target_harian: '10 - 14 titik / hari (Prioritas Minggu Ini: Mulai 8 Oktober 2026)',
+    focus_wilayah: 'Prioritas Sandy: Kec. Tapung (41 Titik) & Tapung Raya (78 Titik)',
+    target_harian: '10 titik / hari (Target Khusus Sandy 4 Hari Tuntas)',
     mobile_url: 'http://192.168.100.107:3000',
     local_laragon_url: 'http://localhost/Survei-POD/',
     generated_at: new Date().toISOString()
   },
+  sandy_tapung_41: finalSandyItems,
+  schedule_sandy: sandyScheduleSummary,
   tapung_prioritas_78: finalTapungItems,
   schedule_tapung: tapungScheduleSummary,
   kecamatan_tapung_list: kecamatanTapungList,

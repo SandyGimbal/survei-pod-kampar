@@ -11,6 +11,8 @@
   const STORAGE_NOTES = 'POD_QUICK_NOTES_V2';
 
   const State = {
+    sandyTapung41: [], // 41 priority points for Sandy in Tapung (4 days @ 10 points)
+    scheduleSandy: [], // 4-day plan for Sandy
     masterList: [], // 63 primary targets
     kamparAll181: [], // 181 Kampar points from 517 database
     tapungPrioritas78: [], // 78 Tapung priority points from Data-Prioritas
@@ -23,7 +25,7 @@
     visited: {},
     notes: {},
     activeTab: 'map', // 'map', 'targets', 'summary'
-    viewDataset: 'TAPUNG78', // 'TAPUNG78' (Default), 'TARGET63', or 'ALL181'
+    viewDataset: 'SANDY41', // 'SANDY41' (Default Khusus Sandy), 'TAPUNG78', 'TARGET63', or 'ALL181'
     selectedPriority: 'ALL', // 'ALL', 'GAR', 'Priority 1', 'Priority 2'
     selectedKecamatan: 'ALL',
     selectedVillage: 'ALL',
@@ -122,17 +124,22 @@
   }
 
   function getActiveDataset() {
+    if (State.viewDataset === 'SANDY41') return State.sandyTapung41;
     if (State.viewDataset === 'TAPUNG78') return State.tapungPrioritas78;
     if (State.viewDataset === 'ALL181') return State.kamparAll181;
     return State.masterList;
   }
 
   function getActiveSchedule() {
+    if (State.viewDataset === 'SANDY41') return State.scheduleSandy;
     if (State.viewDataset === 'TAPUNG78') return State.scheduleTapung;
     return State.schedule;
   }
 
   function getActiveKecamatanList() {
+    if (State.viewDataset === 'SANDY41') {
+      return State.kecamatanTapungList.filter((k) => k.nama_kecamatan === 'Tapung');
+    }
     if (State.viewDataset === 'TAPUNG78') return State.kecamatanTapungList;
     return State.kecamatanList;
   }
@@ -144,6 +151,8 @@
     }
 
     const data = window.POD_SURVEY_MASTER_DATA;
+    State.sandyTapung41 = data.sandy_tapung_41 || [];
+    State.scheduleSandy = data.schedule_sandy || [];
     State.tapungPrioritas78 = data.tapung_prioritas_78 || [];
     State.scheduleTapung = data.schedule_tapung || [];
     State.kecamatanTapungList = data.kecamatan_tapung_list || [];
@@ -171,7 +180,14 @@
     renderKecamatanSummary();
     updateCounterBadges();
 
-    setTimeout(() => initLeafletMap(), 150);
+    setTimeout(() => {
+      initLeafletMap();
+      if (State.viewDataset === 'SANDY41' && State.mapInstance) {
+        highlightBoundaryPolygon('Tapung');
+        const pts = State.sandyTapung41.map((p) => [p.lat, p.lng]);
+        if (pts.length > 0) State.mapInstance.fitBounds(L.latLngBounds(pts), { padding: [35, 35] });
+      }
+    }, 150);
   }
 
   function setupTabs() {
@@ -206,14 +222,55 @@
   }
 
   function setupDatasetSwitcher() {
+    const btnSandy = document.getElementById('btn-dataset-sandy');
     const btnTapung = document.getElementById('btn-dataset-tapung');
     const btn63 = document.getElementById('btn-dataset-63');
     const btn181 = document.getElementById('btn-dataset-181');
     const subtitleEl = document.getElementById('app-subtitle-main');
 
     function setActiveBtn(activeBtn) {
-      [btnTapung, btn63, btn181].forEach((b) => {
+      [btnSandy, btnTapung, btn63, btn181].forEach((b) => {
         if (b) b.classList.toggle('active', b === activeBtn);
+      });
+    }
+
+    if (btnSandy) {
+      btnSandy.addEventListener('click', () => {
+        State.viewDataset = 'SANDY41';
+        State.selectedKecamatan = 'ALL';
+        State.selectedVillage = 'ALL';
+        State.selectedPriority = 'ALL';
+        State.selectedDay = 'ALL';
+        setActiveBtn(btnSandy);
+        if (subtitleEl) {
+          subtitleEl.textContent = '⭐ Prioritas Khusus Sandy: Kec. Tapung • 41 Titik (4 Hari @ 10 Titik)';
+        }
+        const legendBox = document.getElementById('map-tapung-legend-box');
+        if (legendBox) legendBox.style.display = 'flex';
+
+        if (State.boundaryLayer && State.mapInstance && !State.mapInstance.hasLayer(State.boundaryLayer)) {
+          State.boundaryLayer.addTo(State.mapInstance);
+          State.showBoundaries = true;
+          const bText = document.getElementById('boundary-toggle-text');
+          if (bText) bText.textContent = 'Batas Wilayah';
+          const btnB = document.getElementById('btn-map-boundary-toggle');
+          if (btnB) btnB.classList.add('active');
+        }
+        highlightBoundaryPolygon('Tapung');
+        setupPriorityChips();
+        setupKecamatanChips();
+        setupDayFilterBar();
+        renderTargets();
+        renderMapMarkers();
+        renderKecamatanSummary();
+        updateCounterBadges();
+        showToast('⭐ Prioritas Khusus Sandy: Kec. Tapung (41 Titik • Target 10/Hari)');
+        setTimeout(() => {
+          if (State.mapInstance) {
+            const pts = State.sandyTapung41.map((p) => [p.lat, p.lng]);
+            if (pts.length > 0) State.mapInstance.fitBounds(L.latLngBounds(pts), { padding: [35, 35] });
+          }
+        }, 120);
       });
     }
 
@@ -226,7 +283,7 @@
         State.selectedDay = 'ALL';
         setActiveBtn(btnTapung);
         if (subtitleEl) {
-          subtitleEl.textContent = '⭐ Prioritas Minggu Ini: Tapung Raya • 78 Titik POD';
+          subtitleEl.textContent = '🗺️ Prioritas Minggu Ini: Tapung Raya • 78 Titik POD';
         }
         const legendBox = document.getElementById('map-tapung-legend-box');
         if (legendBox) legendBox.style.display = 'flex';
@@ -389,43 +446,70 @@
   }
 
   function setupDayFilterBar() {
-    const container = document.getElementById('day-schedule-filter-bar');
-    if (!container) return;
-    container.innerHTML = '';
+    const containers = [
+      document.getElementById('sticky-day-filter-bar'),
+      document.getElementById('day-schedule-filter-bar')
+    ].filter(Boolean);
+
+    if (containers.length === 0) return;
+    containers.forEach((c) => (c.innerHTML = ''));
 
     const sched = getActiveSchedule();
-    if (!sched || sched.length === 0) return;
+    const currentData = getActiveDataset();
+    if (!sched || sched.length === 0) {
+      containers.forEach((c) => (c.style.display = 'none'));
+      return;
+    }
+    containers.forEach((c) => (c.style.display = 'flex'));
 
-    // "Semua Hari"
-    const allDayBtn = document.createElement('button');
-    allDayBtn.type = 'button';
-    allDayBtn.className = `chip-day-filter ${State.selectedDay === 'ALL' ? 'active' : ''}`;
-    allDayBtn.innerHTML = `<span>📅 Semua Hari</span>`;
-    allDayBtn.addEventListener('click', () => {
-      State.selectedDay = 'ALL';
-      document.querySelectorAll('.chip-day-filter').forEach((c) => c.classList.remove('active'));
-      allDayBtn.classList.add('active');
-      renderTargets();
-      filterMapMarkers();
-      showToast('Menampilkan target seluruh hari');
-    });
-    container.appendChild(allDayBtn);
+    function syncActiveDay(dayVal) {
+      document.querySelectorAll('.chip-day-filter').forEach((c) => {
+        const d = c.getAttribute('data-day');
+        c.classList.toggle('active', d === dayVal);
+      });
+    }
 
-    sched.forEach((s) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = `chip-day-filter ${State.selectedDay === s.hari.toString() ? 'active' : ''}`;
-      btn.innerHTML = `<span>Hari ${s.hari}</span> <strong>(${s.jumlah_titik})</strong>`;
-      btn.addEventListener('click', () => {
-        State.selectedDay = s.hari.toString();
-        document.querySelectorAll('.chip-day-filter').forEach((c) => c.classList.remove('active'));
-        btn.classList.add('active');
+    containers.forEach((container) => {
+      // "Semua Hari"
+      const allDayBtn = document.createElement('button');
+      allDayBtn.type = 'button';
+      allDayBtn.setAttribute('data-day', 'ALL');
+      allDayBtn.className = `chip-day-filter ${State.selectedDay === 'ALL' ? 'active' : ''}`;
+      allDayBtn.innerHTML = `<span>📅 Semua Hari</span> <strong>(${currentData.length})</strong>`;
+      allDayBtn.addEventListener('click', () => {
+        State.selectedDay = 'ALL';
+        syncActiveDay('ALL');
         renderTargets();
         filterMapMarkers();
-        switchTab('targets');
-        showToast(`Menampilkan Target Hari ke-${s.hari} (${s.jumlah_titik} titik)`);
+        showToast(`Menampilkan semua target (${currentData.length} titik)`);
       });
-      container.appendChild(btn);
+      container.appendChild(allDayBtn);
+
+      sched.forEach((s) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('data-day', s.hari.toString());
+        btn.className = `chip-day-filter ${State.selectedDay === s.hari.toString() ? 'active' : ''}`;
+
+        let dayLabel = `Hari ${s.hari}`;
+        if (State.viewDataset === 'SANDY41') {
+          if (s.hari === 1) dayLabel = `H1: Masuk Timur`;
+          else if (s.hari === 2) dayLabel = `H2: Poros Tengah`;
+          else if (s.hari === 3) dayLabel = `H3: Simp Petapahan`;
+          else if (s.hari === 4) dayLabel = `H4: Barat GAR`;
+        }
+
+        btn.innerHTML = `<span>${dayLabel}</span> <strong>(${s.jumlah_titik})</strong>`;
+        btn.title = `${s.judul} - ${s.koridor}`;
+        btn.addEventListener('click', () => {
+          State.selectedDay = s.hari.toString();
+          syncActiveDay(s.hari.toString());
+          renderTargets();
+          filterMapMarkers();
+          showToast(`🎯 Filter Hari ke-${s.hari}: ${s.judul} (${s.jumlah_titik} titik)`);
+        });
+        container.appendChild(btn);
+      });
     });
   }
 
@@ -746,6 +830,7 @@
         <div class="card-village">
           <span>📍</span>
           <span>${p.desa ? `Desa ${p.desa}, ` : ''}Kec. ${p.kecamatan}</span>
+          ${p.cluster_sandy ? ` • <span style="color: #ea580c; font-weight: 700;">🧭 ${p.cluster_sandy}</span>` : ''}
           ${p.info_mill ? ` • <span style="color: #d97706; font-weight: bold;">🏭 ${p.info_mill}</span>` : ''}
         </div>
 
@@ -1127,7 +1212,9 @@
 
     const infoPill = document.getElementById('map-bottom-info');
     if (infoPill) {
-      const dsLabel = State.viewDataset === 'TAPUNG78'
+      const dsLabel = State.viewDataset === 'SANDY41'
+        ? 'Prioritas Sandy: Kec. Tapung (41 Titik • 4 Hari)'
+        : State.viewDataset === 'TAPUNG78'
         ? 'Prioritas Minggu Ini: Tapung Raya'
         : State.viewDataset === 'ALL181'
         ? 'Database 181 Kampar'
@@ -1183,14 +1270,18 @@
 
     const kecTitleEl = document.getElementById('summary-kecamatan-title');
     if (kecTitleEl) {
-      kecTitleEl.textContent = State.viewDataset === 'TAPUNG78'
+      kecTitleEl.textContent = State.viewDataset === 'SANDY41'
+        ? 'Rincian Prioritas Sandy: Kecamatan Tapung (12 Desa • 41 Titik)'
+        : State.viewDataset === 'TAPUNG78'
         ? 'Rincian Titik Fokus Tapung Raya (3 Kecamatan • 24 Desa)'
         : 'Rincian Titik per Kecamatan (13 Kecamatan Target Awal)';
     }
 
     const schedTitleEl = document.getElementById('summary-schedule-title');
     if (schedTitleEl) {
-      schedTitleEl.textContent = State.viewDataset === 'TAPUNG78'
+      schedTitleEl.textContent = State.viewDataset === 'SANDY41'
+        ? 'Jadwal Rute Operasional Khusus Sandy (4 Hari • Target 10 Titik/Hari)'
+        : State.viewDataset === 'TAPUNG78'
         ? 'Jadwal Target & Rute Operasional Tapung Raya (78 Titik • Hari 1 - 7)'
         : 'Jadwal Rute Survei (Mulai 6 - 7 Oktober 2026)';
     }
@@ -1606,9 +1697,15 @@
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows);
-    const sheetName = State.viewDataset === 'TAPUNG78' ? 'Prioritas_Tapung_78' : 'Target_POD_Kampar';
+    const sheetName = State.viewDataset === 'SANDY41'
+      ? 'Prioritas_Sandy_Tapung_41'
+      : State.viewDataset === 'TAPUNG78'
+      ? 'Prioritas_Tapung_78'
+      : 'Target_POD_Kampar';
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
-    const filename = State.viewDataset === 'TAPUNG78'
+    const filename = State.viewDataset === 'SANDY41'
+      ? `Prioritas_Sandy_Tapung_${new Date().toISOString().slice(0, 10)}.xlsx`
+      : State.viewDataset === 'TAPUNG78'
       ? `Prioritas_78_Tapung_Raya_${new Date().toISOString().slice(0, 10)}.xlsx`
       : `Survei_POD_Kampar_${new Date().toISOString().slice(0, 10)}.xlsx`;
     XLSX.writeFile(wb, filename);
@@ -1624,7 +1721,9 @@
     const currentSched = getActiveSchedule();
 
     let txt = `📋 *LAPORAN PROGRESS SURVEI POD KAMPAR*\n`;
-    if (State.viewDataset === 'TAPUNG78') {
+    if (State.viewDataset === 'SANDY41') {
+      txt += `⭐ *FOKUS OPERASIONAL SANDY: KEC. TAPUNG (41 TITIK - TARGET 10/HARI)*\n`;
+    } else if (State.viewDataset === 'TAPUNG78') {
       txt += `⭐ *FOKUS: PRIORITAS TAPUNG RAYA (78 TITIK)*\n`;
     }
     txt += `📅 Update: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}\n`;

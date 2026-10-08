@@ -30,7 +30,7 @@
         <div class="brand-logo">🌴</div>
         <div class="brand-titles">
           <h1 id="app-title-main">POD Navigator Kampar</h1>
-          <p id="app-subtitle-main">⭐ Prioritas Minggu Ini: Tapung Raya • 78 Titik POD</p>
+          <p id="app-subtitle-main">⭐ Prioritas Khusus Sandy: Kec. Tapung • 41 Titik (4 Hari @ 10 Titik)</p>
         </div>
       </div>
       <div class="header-action-buttons">
@@ -64,10 +64,13 @@
 
     <!-- Sticky Filter & Search Bar (Shared across views) -->
     <div class="filter-sticky-bar">
-      <!-- Dataset Mode Switcher: Tapung 78 Prioritas vs 63 Target Utama vs 181 Semua Kampar -->
+      <!-- Dataset Mode Switcher: Prioritas Sandy (41) vs Tapung Raya (78) vs Target Awal (63) vs 181 Semua Kampar -->
       <div class="dataset-switcher-bar">
-        <button type="button" class="btn-dataset-switch prioritas-btn active" id="btn-dataset-tapung">
-          <span>⭐ Prioritas Minggu Ini: Tapung Raya (78)</span>
+        <button type="button" class="btn-dataset-switch prioritas-btn active" id="btn-dataset-sandy">
+          <span>⭐ Prioritas Sandy: Tapung (41)</span>
+        </button>
+        <button type="button" class="btn-dataset-switch" id="btn-dataset-tapung">
+          <span>🗺️ Tapung Raya (78)</span>
         </button>
         <button type="button" class="btn-dataset-switch" id="btn-dataset-63">
           <span>🎯 Target Awal (63)</span>
@@ -85,6 +88,11 @@
       <!-- Priority Filter Chips (GAR, P1, P2) -->
       <div class="priority-chips-scroll" id="priority-chips-scroll">
         <!-- Populated dynamically -->
+      </div>
+
+      <!-- Quick Day Filter Pills Bar (Hari 1 - Hari 4 / 7) -->
+      <div class="day-schedule-filter-bar" id="sticky-day-filter-bar">
+        <!-- Populated dynamically: Semua Hari, Hari 1 (10), Hari 2 (10), Hari 3 (10), Hari 4 (11) -->
       </div>
 
       <!-- Horizontal Scrolling Chips for Kecamatan -->
@@ -221,8 +229,11 @@
         </p>
 
         <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+          <a href="Prioritas_Sandy_Tapung_Avenza.kmz" download="Prioritas_Sandy_Tapung_Avenza.kmz" class="btn-waze" id="btn-export-sandy-quick" style="background: #ea580c; padding: 10px 16px; font-size: 13px; text-decoration: none; color: #ffffff; display: inline-flex; align-items: center; gap: 6px;">
+            <span>⭐</span> Unduh KMZ Sandy (41 Titik)
+          </a>
           <a href="Prioritas_78_Tapung_Avenza.kmz" download="Prioritas_78_Tapung_Avenza.kmz" class="btn-waze" id="btn-export-avenza-quick" style="background: #0284c7; padding: 10px 16px; font-size: 13px; text-decoration: none; color: #ffffff; display: inline-flex; align-items: center; gap: 6px;">
-            <span>📱</span> Unduh KMZ Avenza (78 Titik)
+            <span>📱</span> KMZ Tapung Raya (78)
           </a>
           <button type="button" class="btn-gmaps" id="btn-export-excel-quick" style="padding: 10px 16px; font-size: 13px;">
             <span>📊</span> Unduh Excel (.xlsx)
